@@ -1,6 +1,9 @@
+tft_clear();
+randn('seed',0);
+
 movie_index = Index(177);
 user_index = Index(480);
-topic_index = Index(100);
+topic_index = Index(5000);
 
 X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
