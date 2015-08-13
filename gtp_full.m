@@ -4,7 +4,9 @@ function [] = gtp_full(output_tensor, varargin)
         assert( isa(varargin{i}, 'Tensor'), 'gtp_full', 'varargin elements should be Tensor insantences' )
     end
 
+    tic;
     pre_process();
+    display( [ 'pre_process time: ' num2str(toc) ] );
 
     global tft_indices;
 
@@ -19,12 +21,20 @@ function [] = gtp_full(output_tensor, varargin)
     eval(f_str);
     
     % multiply all input tensors' data into F.data
-    F.data = ones( tft_indices.cardinality );
     tic;
+    F.data = ones( tft_indices.cardinality );
     for i = 1:length(varargin)
         F.data = bsxfun( @times, F.data, varargin{i}.data );
     end
-    toc
+    display( [ 'generate F: ' num2str(toc) ] );
 
     % contract F tensor over indices not present in output_tensor
+    tic;
+    for iind = 1:length(tft_indices)
+        if sum( output_tensor.index_ids == tft_indices(iind).id ) == 0
+            F.data = sum( F.data, iind );
+        end
+    end
+    output_tensor.data = F.data;
+    display( [ 'contact time: ' num2str(toc) ] );
 end

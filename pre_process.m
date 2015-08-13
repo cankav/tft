@@ -16,10 +16,20 @@ function [] = pre_process()
         % reshape tensor data
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Tensor' )
+                % populate Tensor.index_ids
+                tensor_index_len = evalin('base', [ 'length(' vars(var_ind).name '.indices);' ]);
+                index_ids = zeros( 1, tensor_index_len );
+                for tensor_index_ind = 1:tensor_index_len
+                    cmd = [ vars(var_ind).name '.indices{' num2str(tensor_index_ind)  '}.id;' ];
+                    index_ids( tensor_index_ind ) = evalin('base', cmd);
+                end
+                cmd = [vars(var_ind).name '.index_ids = [' num2str(index_ids) '];'];
+                evalin('base', cmd)
+
 
                 % make sure dimension of the data are in the same order as in tft_indices
                 permute_array=[];
-                for tensor_index_ind = 1:evalin('base', [ 'length(' vars(var_ind).name '.indices)' ])
+                for tensor_index_ind = 1:tensor_index_len
                     missing_index_num=0;
                     for tft_indices_ind = 1:length(tft_indices)
                         if tft_indices(tft_indices_ind).id == evalin('base', [vars(var_ind).name '.indices{' num2str(tensor_index_ind) '}.id'])
@@ -27,7 +37,7 @@ function [] = pre_process()
                             num_of_tft_indices_not_in_tensor_indices = 0;
                             for tft_ii = 1:tft_indices_ind
                                 found = false;
-                                for t_ii = 1:evalin('base', [ 'length(' vars(var_ind).name '.indices)' ])
+                                for t_ii = 1:tensor_index_len
                                     if tft_indices(tft_ii).id == evalin('base', [vars(var_ind).name '.indices{' num2str(t_ii) '}.id'])
                                         found = true;
                                         break;
@@ -77,7 +87,7 @@ function [] = pre_process()
                 reshape = false;
                 for tft_indices_ind = 1:length(tft_indices)
                     found = false;
-                    for tensor_index_ind = 1:evalin('base', [ 'length(' vars(var_ind).name '.indices)' ])
+                    for tensor_index_ind = 1:tensor_index_len
                         if tft_indices(tft_indices_ind).id == evalin('base', [vars(var_ind).name '.indices{' num2str(tensor_index_ind) '}.id'])
                             reshape_array = [ reshape_array tft_indices( tft_indices_ind ).cardinality ];
                             found = true;

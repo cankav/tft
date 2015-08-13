@@ -1,10 +1,11 @@
 classdef Tensor < handle
 
     properties
-        data = [];
-        indices = {};
-        reshaped = false;
-        original_indices_permute_array = [];
+        data = []; % raw data
+        indices = {}; % cell of Index objects
+        index_ids = [];
+        reshaped = false; % flag indicating if raw data is reshaped by pre_process.m
+        original_indices_permute_array = []; % permutation array, which can be used to convert raw data to its original shape
 
         tft_indices = []; % local copy of the global variable, required for parfor executions
     end
