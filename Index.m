@@ -1,4 +1,4 @@
-classdef Index
+classdef Index < handle
 
     properties
         id
