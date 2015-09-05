@@ -17,6 +17,14 @@ classdef Tensor < handle
                 assert( isa(varargin{i}, 'Index'), 'Tensor:Tensor', 'Tensor constructor arguments must be of type Index' )
                 obj.indices{end+1} = varargin{i};
             end
+
+            global TFT_Tensor_index
+            if length(TFT_Tensor_index) == 0
+                TFT_Tensor_index = 1;
+            else
+                TFT_Tensor_index = TFT_Tensor_index + 1;
+            end
+            obj.id = TFT_Tensor_index;
         end
 
         function sref = subsref(obj,s)

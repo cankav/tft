@@ -10,7 +10,7 @@ function [] = pre_process()
                 tft_indices = [ evalin( 'base', vars(var_ind).name ) tft_indices];
             end
         end
-
+            
         %display( [ 'pre_process: generated tft_indices of length ' num2str( length(tft_indices) ) ] );
 
         % reshape tensor data

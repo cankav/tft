@@ -18,7 +18,7 @@ classdef Index < handle
             
             global TFT_Index_index
             if length(TFT_Index_index) == 0
-                TFT_Index_index = 0;
+                TFT_Index_index = 1;
             else
                 TFT_Index_index = TFT_Index_index + 1;
             end
