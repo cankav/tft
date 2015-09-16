@@ -1,4 +1,4 @@
-function tensor = create_tensor( tensor_indices )
+function tensor = create_tensor( tensor_indices, init_type )
     global tft_indices
 
     tensor_indices = unique( tensor_indices );
@@ -21,5 +21,11 @@ function tensor = create_tensor( tensor_indices )
 
     tensor = Tensor( indices );
     tensor.tft_indices = tft_indices;
-    tensor.data = rand( data_cardinalities );
+    if strcmp( init_type, 'zeros' )
+        tensor.data = zeros( data_cardinalities );
+    elseif strcmp( init_type, 'ones' )
+        tensor.data = ones( data_cardinalities );            
+    else
+        tensor.data = rand( data_cardinalities );
+    end
 end

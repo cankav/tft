@@ -8,6 +8,7 @@ classdef Tensor < handle
         original_indices_permute_array = []; % permutation array, which can be used to convert raw data to its original shape
 
         tft_indices = []; % local copy of the global variable, required for parfor executions
+        id = -1;
     end
 
     methods

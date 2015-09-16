@@ -12,8 +12,5 @@ function [] = generate_tensor_indices_adj_mat(varargin)
                 adj_mat( varargin{vind}.id, tft_indices(tftii).id ) = 1;
             end
         end
-        % if sum( output_tensor.index_ids == tft_indices(tftii).id ) == 1
-        %     adj_mat( varargin{vind}.id, tft_indices(tftii).id ) = 1;
-        % end
     end
 end
