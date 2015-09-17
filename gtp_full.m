@@ -4,9 +4,7 @@ function [] = gtp_full(output_tensor, varargin)
         assert( isa(varargin{i}, 'Tensor'), 'gtp_full', 'varargin elements should be Tensor insantences' )
     end
 
-    tic;
     pre_process();
-    display( [ ' pre_process time: ' num2str(toc) ] );
 
     global tft_indices;
 

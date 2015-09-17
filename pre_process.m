@@ -1,7 +1,8 @@
 function [] = pre_process()
+    tic
     global tft_indices
     global TFT_Tensors
-    TFT_Tensors = {}
+    TFT_Tensors = {};
 
     if length(tft_indices) == 0
 
@@ -9,16 +10,18 @@ function [] = pre_process()
         vars = evalin('base', 'whos');
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Index' )
-                tft_indices = [ evalin( 'base', vars(var_ind).name ) tft_indices];
+                tft_indices = [ tft_indices evalin( 'base', vars(var_ind).name ) ];
             end
         end
+        % order tft_indices by Index.id fields
+        tft_indices = tft_indices( [tft_indices.id] )
             
         %display( [ 'pre_process: generated tft_indices of length ' num2str( length(tft_indices) ) ] );
 
         % reshape tensor data
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Tensor' )
-                TFT_Tensors{ evalin('base', vars(var_ind).name '.id' ) } = evalin('base', vars(var_ind).name );
+                TFT_Tensors{ evalin('base', [vars(var_ind).name '.id'] ) } = evalin('base', vars(var_ind).name );
 
                 % populate Tensor.index_ids
                 tensor_index_len = evalin('base', [ 'length(' vars(var_ind).name '.indices);' ]);
@@ -117,4 +120,5 @@ function [] = pre_process()
             end
         end
     end
+    display( [ ' pre_process time: ' num2str(toc) ] );
 end

@@ -21,8 +21,8 @@ gtp_full_time = tic;
 gtp_full(X, Z1, Z2);
 display( [ 'gtp_full time: ' num2str(toc(gtp_full_time)) ] );
 
-X_dot_product = squeeze(Z2.data) * squeeze(Z1.data);
-assert( sum_all_dims( float_diff(X_dot_product, squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of full implementation and dot product are different.' );
+X_dot_product = squeeze(Z2.data) * squeeze(Z1.data)';
+assert( sum_all_dims( float_diff(X_dot_product', squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of full implementation and dot product are different.' );
 
 global tft_indices
 tft_indices = [];
@@ -34,7 +34,7 @@ gtp_time = tic;
 gtp(X, Z1, Z2);
 display( [ 'gtp time: ' num2str(toc(gtp_time)) ] );
 
-assert( sum_all_dims( float_diff(X_dot_product, squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
+assert( sum_all_dims( float_diff(X_dot_product', squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
 
 % TODO: test with matlab dot product
 
