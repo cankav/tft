@@ -14,7 +14,7 @@ function [] = pre_process()
             end
         end
         % order tft_indices by Index.id fields
-        tft_indices = tft_indices( [tft_indices.id] )
+        tft_indices = tft_indices( [tft_indices.id] );
             
         %display( [ 'pre_process: generated tft_indices of length ' num2str( length(tft_indices) ) ] );
 

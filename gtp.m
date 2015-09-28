@@ -31,7 +31,7 @@ function [] = gtp(output_tensor, varargin)
         for ctid_ind = 1:length(ci_contraction_tensor_ids)
             tmp_tensor_index_ids = [tmp_tensor_index_ids TFT_Tensors{ci_contraction_tensor_ids(ctid_ind)}.index_ids];
         end
-        display( ['tmp_tensor_index_ids: ' num2str(tmp_tensor_index_ids)] )
+
         tmp_tensor = create_tensor( tmp_tensor_index_ids, 'ones' );
         adj_mat(tmp_tensor.id, tmp_tensor.index_ids) = 1;
 
