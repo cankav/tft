@@ -24,4 +24,5 @@ X_dot_product = squeeze(Z2.data)' * squeeze(Z1.data);
 pre_process();
 
 mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC'  gtp_mex.cpp
+%mex -largeArrayDims CXXFLAGS='-fPIC'  gtp_mex.cpp
 gtp_mex(16, X, Z1, Z2);
