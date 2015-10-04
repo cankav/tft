@@ -49,6 +49,7 @@ Z1.data = Z1_data_orig;
 Z2.data = Z2_data_orig;
 
 %% gtp_mex trial
+pre_process();
 gtp_mex_time = tic;
 gtp_mex(X, Z1, Z2);
 display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );

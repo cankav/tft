@@ -109,11 +109,13 @@ function [] = pre_process()
                 end
 
                 if reshape
-                    cmd = [vars(var_ind).name '.data = reshape(' vars(var_ind).name '.data, [' num2str(reshape_array) ']);'];
-                    evalin('base', cmd)
+                    if evalin( 'base', [ 'length(' vars(var_ind).name '.data)' ] ) ~= 0
+                        cmd = [vars(var_ind).name '.data = reshape(' vars(var_ind).name '.data, [' num2str(reshape_array) ']);'];
+                        evalin('base', cmd)
 
-                    cmd = [vars(var_ind).name '.reshaped = 1;'];
-                    evalin('base', cmd)
+                        cmd = [vars(var_ind).name '.reshaped = 1;'];
+                        evalin('base', cmd)
+                    end
                 end
 
                 % check data size for consitency
