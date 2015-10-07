@@ -10,11 +10,9 @@ X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
 Z2 = Tensor( topic_index, user_index );
 
-X_data_orig = rand( movie_index.cardinality, user_index.cardinality );
 Z1_data_orig = rand( topic_index.cardinality, movie_index.cardinality );
 Z2_data_orig = rand( topic_index.cardinality, user_index.cardinality );
 
-%X.data = X_data_orig;
 Z1.data = Z1_data_orig;
 Z2.data = Z2_data_orig;
 
@@ -23,6 +21,8 @@ X_dot_product = squeeze(Z2.data)' * squeeze(Z1.data);
 
 pre_process();
 
-mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC'  gtp_mex.cpp
-%mex -largeArrayDims CXXFLAGS='-fPIC'  gtp_mex.cpp
+% fpermissive is required to conform with gtp(X, Z1, Z2) syntax, otherwise syntax must be X=gtp(Z1,Z2)
+mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp
+%mex -largeArrayDims CXXFLAGS='-fPIC -fpermissive'  gtp_mex.cpp
+X.indices{1}
 gtp_mex(16, X, Z1, Z2);

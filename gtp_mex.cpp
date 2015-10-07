@@ -12,7 +12,8 @@
 
 int num_threads;
 
-size_t* tft_indices;
+size_t* tft_indices_cardinalities;
+size_t* tft_indices_ids;
 size_t tft_indices_length;
 
 double* output_data;
@@ -75,46 +76,50 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // 0: degree of parallelism
   num_threads = (int) mxGetScalar(prhs[0]);
   // 1: output tensor
+  const int output_tensor_prhs_index = 1;
   // 2: input 1 tensor
+  const int input0_tensor_prhs_index = 2;
   // 3: input 2 tensor
+  const int input1_tensor_prhs_index = 3;
 
   mxArray* tft_indices_mx = mexGetVariable("global", "tft_indices");
-  double* tft_indices_mx_data = (double*) mxGetData( tft_indices_mx );
   tft_indices_length = mxGetNumberOfElements(tft_indices_mx);
-  tft_indices = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
+  tft_indices_cardinalities = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
+  tft_indices_ids = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
   //std::cout << "tft_indices class id: " << mxGetClassID(tft_indices_mx) << std::endl; // check from from MATLAB/R2014a/extern/include/matrix.h mxClassID enum
   for (int i=0; i<tft_indices_length; i++){
-    tft_indices[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
+    tft_indices_cardinalities[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
+    tft_indices_ids[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "id")))))[0]);
   }
 
   is_sparse = false;
-  for (int prhs_ind=1; prhs_ind<3; prhs_ind++){
+  for (int prhs_ind=output_tensor_prhs_index; prhs_ind<=input1_tensor_prhs_index; prhs_ind++){
     is_sparse = is_sparse || mxIsSparse( mxGetProperty( prhs[ prhs_ind ], 0, "data" ) );
   }
 
   if ( is_sparse == true ){
-    for (int prhs_ind=1; prhs_ind<4; prhs_ind++){
+    // TODO implement
+    //mxCreateSparse(max_numel, 1, current_output_jcs[1], mxREAL);
+
+    for (int prhs_ind=output_tensor_prhs_index; prhs_ind<=input1_tensor_prhs_index; prhs_ind++){
       double* target_data;
       mwIndex* target_irs;
       mwIndex* target_jcs;
-      if ( prhs_ind == 1 ){
+      if ( prhs_ind == output_tensor_prhs_index ){
 	target_data = output_data;
 	target_irs = output_irs;
-	target_jcs = output_jcs;      
+	target_jcs = output_jcs;
 
-      }else if ( prhs_ind == 2 ){
+      }else if ( prhs_ind == input0_tensor_prhs_index ){
 	target_data = input0_data;
 	target_irs = input0_irs;
 	target_jcs = input0_jcs;
 
-      }else if ( prhs_ind == 3 ){
+      }else if ( prhs_ind == input1_tensor_prhs_index ){
 	target_data = input1_data;
 	target_irs = input1_irs;
 	target_jcs = input1_jcs;
       }
-
-      // TODO implement
-      //mxCreateSparse(max_numel, 1, current_output_jcs[1], mxREAL);
       
       mxArray* data_array = mxGetProperty( prhs[ prhs_ind ], 0, "data" );
       target_data = (double*) mxGetData(data_array);
@@ -124,8 +129,43 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
   }else{
-    // TODO implement
-    //output_data = mxCreateNumericArray(ndim, dims, classIDflags[ifield], mxREAL);    
+    size_t ndim = tft_indices_length;
+    mxArray* output_indices_mx = mxGetProperty( prhs[ output_tensor_prhs_index ], 0, "indices" );
+    size_t output_indices_length = mxGetNumberOfElements( output_indices_mx );
+    std::cout << "SLM output_indices_length" << output_indices_length << std::endl;
+    mwSize* output_data_array_cardinalities_size = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
+    for ( int i=0; i<tft_indices_length; i++ )
+      output_data_array_cardinalities_size[i] = 1;
+    mxArray* output_data_array_cardinalities_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities_size, mxDOUBLE_CLASS, mxREAL);
+    mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
+    for ( size_t tft_indices_ind=0; tft_indices_ind<ndim; tft_indices_ind++ ){
+      std::cout << "SLM tft_indices_ind " << tft_indices_ind << std::endl;
+      for ( size_t output_indices_ind=0; output_indices_ind<output_indices_length; output_indices_ind++ ){
+	std::cout << "SLM output_indices_ind " << output_indices_ind << std::endl;
+	mxArray* prop_id = mxGetProperty( mxGetCell(output_indices_mx, output_indices_ind), 0, "id");
+	std::cout << "SLM prop_id " << prop_id << std::endl;
+	size_t output_index_id = (size_t) ( ((double*)mxGetData(prop_id))[0] );
+	std::cout << "SLM output_index_id" << output_index_id << std::endl;
+	if ( tft_indices_ids[tft_indices_ind] == output_index_id ){
+	  std::cout << "SLM YES" << std::endl;
+	  std::cout << "SLM output_data_array_cardinalities[tft_indices_ind]" <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
+	  std::cout << "SLM tft_indices_cardinalities[tft_indices_ind]" <<  tft_indices_cardinalities[tft_indices_ind] << std::endl;
+	  output_data_array_cardinalities[tft_indices_ind] = tft_indices_cardinalities[tft_indices_ind];
+	}else{
+	  std::cout << "SLM NO" << std::endl;
+	  std::cout << "SLM output_data_array_cardinalities[tft_indices_ind]" <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
+	  output_data_array_cardinalities[tft_indices_ind] = 1;
+	}
+	std::cout << "SLM DONE" << std::endl;
+      }
+    }
+
+    for (size_t i =0; i<ndim; i++){
+      print_lock.lock();
+      std::cout << output_data_array_cardinalities[i] << std::endl;
+      print_lock.unlock();
+    }
+    mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", mxCreateNumericArray(ndim, output_data_array_cardinalities, mxDOUBLE_CLASS, mxREAL) );
   }
 
   pthread_t threads[num_threads];
