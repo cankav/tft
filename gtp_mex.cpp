@@ -57,13 +57,13 @@ void* compute_output_tensor_part_dense(void *args){
 
   std::pair <size_t,size_t> start_end = get_thr_output_data_start_end(tid);
   
-  print_lock.lock();
-  std::cout << tid << " start index " << start_end.first << " end index " << start_end.second << " output_data_numel " << output_data_numel << " num_threads " <<  num_threads << std::endl;
-  print_lock.unlock();
+  //print_lock.lock();
+  //std::cout << tid << " start index " << start_end.first << " end index " << start_end.second << " output_data_numel " << output_data_numel << " num_threads " <<  num_threads << std::endl;
+  //print_lock.unlock();
   //std::cout << "." << std::endl;
 
   for ( size_t output_numel_ind=start_end.first; output_numel_ind<start_end.second; output_numel_ind++ ){
-    std::cout << ".";
+    
   }
 
 }
@@ -129,42 +129,44 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
   }else{
+    output_data_numel = 1;
     size_t ndim = tft_indices_length;
     mxArray* output_indices_mx = mxGetProperty( prhs[ output_tensor_prhs_index ], 0, "indices" );
     size_t output_indices_length = mxGetNumberOfElements( output_indices_mx );
-    std::cout << "SLM output_indices_length" << output_indices_length << std::endl;
+    //std::cout << "SLM output_indices_length" << output_indices_length << std::endl;
     mwSize* output_data_array_cardinalities_size = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
     for ( int i=0; i<tft_indices_length; i++ )
       output_data_array_cardinalities_size[i] = 1;
     mxArray* output_data_array_cardinalities_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities_size, mxDOUBLE_CLASS, mxREAL);
     mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
     for ( size_t tft_indices_ind=0; tft_indices_ind<ndim; tft_indices_ind++ ){
-      std::cout << "SLM tft_indices_ind " << tft_indices_ind << std::endl;
+      //std::cout << "\nSLM tft_indices_ind " << tft_indices_ind << std::endl;
       for ( size_t output_indices_ind=0; output_indices_ind<output_indices_length; output_indices_ind++ ){
-	std::cout << "SLM output_indices_ind " << output_indices_ind << std::endl;
+	//std::cout << "SLM output_indices_ind " << output_indices_ind << std::endl;
 	mxArray* prop_id = mxGetProperty( mxGetCell(output_indices_mx, output_indices_ind), 0, "id");
-	std::cout << "SLM prop_id " << prop_id << std::endl;
+	//std::cout << "SLM prop_id " << prop_id << std::endl;
 	size_t output_index_id = (size_t) ( ((double*)mxGetData(prop_id))[0] );
-	std::cout << "SLM output_index_id" << output_index_id << std::endl;
+	//std::cout << "SLM output_index_id " << output_index_id << std::endl;
 	if ( tft_indices_ids[tft_indices_ind] == output_index_id ){
-	  std::cout << "SLM YES" << std::endl;
-	  std::cout << "SLM output_data_array_cardinalities[tft_indices_ind]" <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
-	  std::cout << "SLM tft_indices_cardinalities[tft_indices_ind]" <<  tft_indices_cardinalities[tft_indices_ind] << std::endl;
+	  //std::cout << "SLM YES tft_indices_ind " << tft_indices_ind << std::endl;
+	  //std::cout << "SLM output_data_array_cardinalities[tft_indices_ind] " <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
+	  //std::cout << "SLM tft_indices_cardinalities[tft_indices_ind] " <<  tft_indices_cardinalities[tft_indices_ind] << std::endl;
 	  output_data_array_cardinalities[tft_indices_ind] = tft_indices_cardinalities[tft_indices_ind];
+	  output_data_numel *= tft_indices_cardinalities[tft_indices_ind];
 	}else{
-	  std::cout << "SLM NO" << std::endl;
-	  std::cout << "SLM output_data_array_cardinalities[tft_indices_ind]" <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
-	  output_data_array_cardinalities[tft_indices_ind] = 1;
+	  //std::cout << "SLM NO" << std::endl;
+	  //std::cout << "SLM output_data_array_cardinalities[tft_indices_ind] " <<  output_data_array_cardinalities[tft_indices_ind] << std::endl;
+	  //output_data_array_cardinalities[tft_indices_ind] = 1;
 	}
-	std::cout << "SLM DONE" << std::endl;
+	//std::cout << "SLM DONE" << std::endl;
       }
     }
 
-    for (size_t i =0; i<ndim; i++){
-      print_lock.lock();
-      std::cout << output_data_array_cardinalities[i] << std::endl;
-      print_lock.unlock();
-    }
+    // for (size_t i =0; i<ndim; i++){
+    //   print_lock.lock();
+    //   std::cout << output_data_array_cardinalities[i] << std::endl;
+    //   print_lock.unlock();
+    // }
     mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", mxCreateNumericArray(ndim, output_data_array_cardinalities, mxDOUBLE_CLASS, mxREAL) );
   }
 
