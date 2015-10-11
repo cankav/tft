@@ -1,14 +1,10 @@
 #include "mex.h"
-
 #include <iostream>
-
 #include <pthread.h>
-
 #include <string.h>
-
 #include <stdint.h>
-
-#include <mutex>
+#include <mutex> // for cout lock
+#include <math.h>
 
 int num_threads;
 
@@ -50,7 +46,9 @@ void* compute_output_tensor_part_sparse(void *args){
   // TODO: implement
 }
 
-
+void get_index_configuration_from_linear_index_dense(size_t *index_configuration, size_t linear_index, size_t* tensor_index_ids){
+  
+}
 
 void* compute_output_tensor_part_dense(void *args){
   int tid = (intptr_t) args;
@@ -62,8 +60,27 @@ void* compute_output_tensor_part_dense(void *args){
   //print_lock.unlock();
   //std::cout << "." << std::endl;
 
+  size_t* output_multi_index = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
+
   for ( size_t output_numel_ind=start_end.first; output_numel_ind<start_end.second; output_numel_ind++ ){
-    
+
+    // for s_1 = 2, s_2 = 3, s_3 = 4
+    // x = 0:23
+    // [x ; mod(floor(x/12),2); mod(floor(x / 4), 3); mod(floor(x/1),4) ]'
+    size_t right_hand_inds_step_divider = 1;
+    for( size_t tft_indices_ind=tft_indices_length-1; tft_indices_ind!=-1; tft_indices_ind-- ){
+      output_multi_index[tft_indices_ind] = ((size_t)floor(output_numel_ind / right_hand_inds_step_divider)) % tft_indices_cardinalities[tft_indices_ind];
+      right_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
+    }
+
+    // print_lock.lock();
+    // std::cout << "output_numel_ind " << output_numel_ind;
+    // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+    //   std::cout << " " << output_multi_index[tft_indices_ind];
+    // }
+    // std::cout << std::endl;
+    // print_lock.unlock();
+
   }
 
 }
