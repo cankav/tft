@@ -1,3 +1,4 @@
+clear all;
 tft_clear();
 randn('seed',0);
 
@@ -45,8 +46,8 @@ Z1.data = Z1_data_orig;
 Z2.data = Z2_data_orig;
 
 %% gtp_mex trial
-% pre_process();
-% gtp_mex_time = tic;
-% gtp_mex(X, Z1, Z2);
-% display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
-% assert( sum_all_dims( float_diff(X_dot_product', squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
+pre_process();
+gtp_mex_time = tic;
+gtp_mex(16, X, Z1, Z2);
+display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
+assert( sum_all_dims( float_diff(X_dot_product', squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
