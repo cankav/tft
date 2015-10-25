@@ -17,6 +17,7 @@ mxArray* output_data_mx;
 mwIndex* output_irs;
 mwIndex* output_jcs;
 size_t output_data_numel;
+size_t output_data_numel_nzmax;
 size_t* output_index_cardinalities;
 size_t* output_indices_full_cardinality;
 size_t* output_indices_full_strides;
@@ -42,6 +43,8 @@ size_t contraction_index_inds_length;
 //std::mutex print_lock;
 
 bool is_sparse;
+bool is_sparse_input0;
+bool is_sparse_input1;
 
 std::pair <size_t,size_t> get_thr_output_data_start_end(int tid){
   size_t step_size = output_data_numel / num_threads;
@@ -250,32 +253,39 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   //std::cout << "SLM output_indices_full_cardinality AFTER " << output_indices_full_cardinality << std::endl;
   is_sparse = false;
   for (int prhs_ind=output_tensor_prhs_index; prhs_ind<=input1_tensor_prhs_index; prhs_ind++){
-    is_sparse = is_sparse || mxIsSparse( mxGetProperty( prhs[ prhs_ind ], 0, "data" ) );
+    bool is_tensor_sparse = mxIsSparse( mxGetProperty( prhs[ prhs_ind ], 0, "data" ) );
+    is_sparse = is_sparse || is_tensor_sparse;
+    if( prhs_ind == input0_tensor_prhs_index ){
+      is_sparse_input0 = is_tensor_sparse;
+    }else if( prhs_ind == input1_tensor_prhs_index ){
+      is_sparse_input1 = is_tensor_sparse;
+    }
   }
 
   if ( is_sparse == true ){
-    // TODO implement
-    //mxCreateSparse(max_numel, 1, current_output_jcs[1], mxREAL);
+    output_data_numel_nzmax = output_data_numel * 0.2;
+    mxArray* output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
+    output_data = mxGetPr(output_data_mx);
+    
 
     for (int prhs_ind=output_tensor_prhs_index; prhs_ind<=input1_tensor_prhs_index; prhs_ind++){
-      mwIndex** target_irs;
-      mwIndex** target_jcs;
-      if ( prhs_ind == output_tensor_prhs_index ){
-	target_irs = &output_irs;
-	target_jcs = &output_jcs;
-
-      }else if ( prhs_ind == input0_tensor_prhs_index ){
-	target_irs = &input0_irs;
-	target_jcs = &input0_jcs;
-
+      if ( prhs_ind == input0_tensor_prhs_index ){
+	if ( is_sparse_input0 == true ){
+	  mxArray* data_array = mxGetProperty( prhs[ prhs_ind ], 0, "data" );
+	  *target_irs = mxGetIr( data_array );
+	  *target_jcs = mxGetJc( data_array );
+	}else {
+	  
+	}
       }else if ( prhs_ind == input1_tensor_prhs_index ){
-	target_irs = &input1_irs;
-	target_jcs = &input1_jcs;
-      }
-      
-      mxArray* data_array = mxGetProperty( prhs[ prhs_ind ], 0, "data" );
-      *target_irs = mxGetIr( data_array );
-      *target_jcs = mxGetJc( data_array );
+	if ( is_sparse_input1 == true ){
+	  mxArray* data_array = mxGetProperty( prhs[ prhs_ind ], 0, "data" );
+	  *target_irs = mxGetIr( data_array );
+	  *target_jcs = mxGetJc( data_array );
+	}else{
+	  
+	}
+
       //std::cout << mxGetNumberOfElements(data_array) << std::endl;
     }
 

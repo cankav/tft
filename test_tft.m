@@ -18,7 +18,7 @@ Z1.data = Z1_data_orig;
 Z2.data = Z2_data_orig;
 
 % prepare base case result
-X_dot_product = squeeze(Z2.data)' * squeeze(Z1.data);
+X_dot_product = Z2.data' * Z1.data;
 
 %% gtp_full trial
 gtp_full_time = tic;

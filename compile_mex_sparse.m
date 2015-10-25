@@ -11,8 +11,13 @@ X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
 Z2 = Tensor( topic_index, user_index );
 
-Z1.data = rand( topic_index.cardinality, movie_index.cardinality );
-Z2.data = rand( topic_index.cardinality, user_index.cardinality );
+Z1.data = sparse( topic_index.cardinality, movie_index.cardinality );
+Z2.data = sparse( topic_index.cardinality, user_index.cardinality );
+
+% initialize with random data, 20% sparsity
+sparsity = 0.20
+Z1.data = ( rand(topic_index.cardinality, movie_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, movie_index.cardinality);
+Z2.data = ( rand(topic_index.cardinality, user_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, user_index.cardinality);
 
 % prepare base case result
 X_dot_product = Z2.data' * Z1.data;
