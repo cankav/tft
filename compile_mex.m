@@ -20,8 +20,8 @@ X_dot_product = Z2.data' * Z1.data;
 pre_process();
 
 % fpermissive is required to conform with gtp(X, Z1, Z2) syntax, otherwise syntax must be X=gtp(Z1,Z2)
-%mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp % c++11 for print mutex lock
-mex -largeArrayDims CXXFLAGS='-fPIC -fpermissive'  gtp_mex.cpp
+mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp % c++11 for print mutex lock
+%mex -largeArrayDims CXXFLAGS='-fPIC -fpermissive'  gtp_mex.cpp
 gtp_full_time = tic;
 gtp_mex(16, X, Z1, Z2);
 display( [ 'gtp_mex time: ' num2str(toc(gtp_full_time)) ] );
