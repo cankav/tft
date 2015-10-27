@@ -215,7 +215,13 @@ void init_sparse_tensor(double** target_data, size_t** target_indices_full_cardi
   init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, input_mxArray );
 }
 
-void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, const mxArray* input_mxArray ){
+void init_sparse_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
+  output_data_numel_nzmax = output_data_numel * 0.2; // TODO: how to set nzmax value?
+  mxArray* output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
+  output_data = mxGetPr(output_data_mx);
+  init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
+}
+void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
   output_indices_mx = mxGetProperty( target_mxArray, 0, "indices" );
   output_indices_length = mxGetNumberOfElements( output_indices_mx );
   //std::cout << "SLM output_indices_length " << output_indices_length << std::endl;
@@ -253,7 +259,7 @@ void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_ind
   }
   output_data_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities, mxDOUBLE_CLASS, mxREAL);
   output_data = (double*) mxGetData(output_data_mx);
-  init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, input_mxArray);
+  init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray);
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -297,9 +303,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   //std::cout << "is_sparse: " << is_sparse << std::endl;
   if ( is_sparse == true ){
     // sparse init
-    output_data_numel_nzmax = output_data_numel * 0.2; // TODO: how to set nzmax value?
-    mxArray* output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
-    output_data = mxGetPr(output_data_mx);
+
+    init_sparse_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_numel, &output_indices_full_strides);
 
     if ( is_sparse_input0 == true ){
       init_sparse_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ], &input0_irs, &input0_jcs);
@@ -316,7 +321,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }else{
     // dense init
 
-    init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_numel, &output_indices_full_strides, prhs[ output_tensor_prhs_index ]);
+    init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_numel, &output_indices_full_strides);
     init_dense_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ]);
     init_dense_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ]);
 
