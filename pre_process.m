@@ -21,7 +21,13 @@ function [] = pre_process()
         % reshape tensor data
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Tensor' )
-                if evalin('base', ['issparse(' vars(var_ind).name '.data)']) == 0
+                if evalin('base', ['issparse(' vars(var_ind).name '.data)']) == 1
+                    % convert sparse matrices into sparse arrays
+                    evalin( 'base', ['pre_process_sparse_obj_size = size(' vars(var_ind).name '.data);'] );
+                    if evalin('base', [ 'pre_process_sparse_obj_size(2) ~= 1' ] )
+                        evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                    end
+                else
                     TFT_Tensors{ evalin('base', [vars(var_ind).name '.id'] ) } = evalin('base', vars(var_ind).name );
 
                     % populate Tensor.index_ids
