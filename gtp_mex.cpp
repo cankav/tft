@@ -50,6 +50,8 @@ bool is_sparse;
 bool is_sparse_input0;
 bool is_sparse_input1;
 
+//size_t compute_output_tensor_part_helper_call_count = 0;
+
 std::pair <size_t,size_t> get_thr_output_data_start_end(int tid){
   size_t step_size = output_data_numel / num_threads;
   size_t thr_output_data_index_start = tid * step_size;
@@ -76,7 +78,7 @@ double get_tensor_data_by_full_index_configuration_dense(double* tensor_data, si
   }
 }
 
-double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, size_t* index_configuration, size_t* tensor_indices_full_strides, size_t tensor_data_numel, mwIndex* input1_irs){
+double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, size_t* index_configuration, size_t* tensor_indices_full_strides, size_t tensor_data_numel, mwIndex* target_irs){
   // search for given index, return stored value if given index is found, otherwise return zero
   size_t tensor_numel_index = 0;
   for (int tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++){
@@ -88,14 +90,17 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
     return 0;
   }
 
-  // print_lock.lock();
-  // std::cout << "binary_search result: " << std::binary_search(input1_irs, input1_irs+output_data_numel_nzmax, tensor_numel_index) << " tensor_numel_index " << tensor_numel_index <<std::endl;
-  // print_lock.unlock();
-
-  return 0;
+  print_lock.lock();
+  std::cout << "binary_search result: " << std::binary_search(target_irs, target_irs+output_data_numel_nzmax, tensor_numel_index) << " tensor_numel_index " << tensor_numel_index <<std::endl;
+  print_lock.unlock();
+  return 0; // std::binary_search(target_irs, target_irs+output_data_numel_nzmax, tensor_numel_index);
 }
 
 void compute_output_tensor_part_helper(size_t* output_full_index_configuration, size_t output_numel_index, size_t increment_index_ind=0){
+  //compute_output_tensor_part_helper_call_count++;
+  // print_lock.lock();
+  // std::cout << "compute_output_tensor_part_helper: loop limit " << tft_indices_cardinalities[contraction_index_inds[increment_index_ind]] << std::endl;
+
   for ( size_t contraction_index_value=0;
 	contraction_index_value<tft_indices_cardinalities[contraction_index_inds[increment_index_ind]];
 	contraction_index_value++ ){
@@ -116,6 +121,8 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
       compute_output_tensor_part_helper( output_full_index_configuration, output_numel_index, increment_index_ind+1 );
     }
   }
+  // std::cout << "compute_output_tensor_part_helper: COMPLETE loop limit " << tft_indices_cardinalities[contraction_index_inds[increment_index_ind]] << std::endl;  
+  // print_lock.unlock();
 }
 
 void* compute_output_tensor_part(void *args){
@@ -125,13 +132,10 @@ void* compute_output_tensor_part(void *args){
   
   // print_lock.lock();
   // std::cout << tid << " start index " << start_end.first << " end index " << start_end.second << " output_data_numel " << output_data_numel << " num_threads " <<  num_threads << std::endl;
-  // print_lock.unlock();
-  // std::cout << "." << std::endl;
 
   size_t* output_full_index_configuration = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
   int loop_count = 0;
   for ( size_t output_numel_ind=start_end.first; output_numel_ind<start_end.second; output_numel_ind++ ){
-    print_lock.lock();
     // calculate output_full_index_configuration for output_numel_ind
     // for s_1 = 2, s_2 = 3, s_3 = 4
     // x = 0:23
@@ -146,27 +150,30 @@ void* compute_output_tensor_part(void *args){
 	//right_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
 	left_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
 
-	std::cout << "SLM output_indices_full_strides[" << tft_indices_ind << "] " << std::endl;
-	std::cout << "output_full_index_configuration[" << tft_indices_ind << "]\t" << output_full_index_configuration[tft_indices_ind]  << " output_indices_full_strides[tft_indices_ind] \t" << output_indices_full_strides[tft_indices_ind] << " output_numel_index \t" << output_numel_index << std::endl;
-	std::cout << "WTF" << std::endl;
-
+	// print_lock.lock();
+	// std::cout << "SLM output_indices_full_strides[" << tft_indices_ind << "] " << std::endl;
+	// std::cout << "output_full_index_configuration[" << tft_indices_ind << "]\t" << output_full_index_configuration[tft_indices_ind]  << " output_indices_full_strides[tft_indices_ind] \t" << output_indices_full_strides[tft_indices_ind] << " output_numel_index \t" << output_numel_index << std::endl;
+	// std::cout << "WTF" << std::endl;
+	// print_lock.unlock();
 	output_numel_index += output_full_index_configuration[tft_indices_ind] * output_indices_full_strides[tft_indices_ind];
       }
     }
 
-    std::cout << "output_numel_ind " << output_numel_ind;
-    for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
-      std::cout << " " << output_full_index_configuration[tft_indices_ind];
-    }
-    std::cout << std::endl;
-    std::cout << "output_numel_index " << output_numel_index << std::endl;
+    // print_lock.lock();
+    // std::cout << "output_numel_ind " << output_numel_ind;
+    // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+    //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
+    // }
+    // std::cout << std::endl;
+    // std::cout << "output_numel_index " << output_numel_index << std::endl;
 
-    std::cout << "contraction_index_inds_length " << contraction_index_inds_length << std::endl;
+    //std::cout << "contraction_index_inds_length " << contraction_index_inds_length << std::endl;
+    //print_lock.unlock();
     // std::cout << "output_data " << output_data << std::endl;
     if ( contraction_index_inds_length == 0 ){
       // no contraction, just multiply and store result
       // TODO: TEST, not tested with matrix product test
-      if ( is_sparse == true ){ 
+      if ( is_sparse == true ){
         output_data[output_numel_index] =
 	  get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs) *
 	  get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs);
@@ -179,18 +186,27 @@ void* compute_output_tensor_part(void *args){
     }else{
       // loop for each combination of contraction indexes' values and store result
       output_data[output_numel_index] = 0;
-      std::cout << "output_data[" << output_numel_index << "] is " << output_data[output_numel_index] << " " << output_data[8] << std::endl;
+      // print_lock.lock();
+      // std::cout << "output_data[" << output_numel_index << "] is " << output_data[output_numel_index] << " " << output_data[8] << std::endl;
+      // std::cout << "WTF2" << std::endl;
+      // print_lock.unlock();
 
-      std::cout << "WTF2" << std::endl;      
+      //compute_output_tensor_part_helper_call_count = 0;
       compute_output_tensor_part_helper(output_full_index_configuration, output_numel_index);
-      std::cout << "WTF3" << std::endl;
+       // print_lock.lock();
+       // std::cout << "WTF3 compute_output_tensor_part_helper_call_count " << compute_output_tensor_part_helper_call_count << std::endl;
+       // print_lock.unlock();
     }
-    std::cout << "WTF4" << std::endl;
-    loop_count++;
-    if( loop_count == 2 ){
-    }
-    print_lock.unlock();
+    //  print_lock.lock();
+    //  std::cout << "WTF4" << std::endl;
+    //  print_lock.unlock();
+    // loop_count++;
+    // if( loop_count == 2 ){
+    //   return 0;
+    // }
   }
+  //std::cout << tid << " COMPLETE start index " << start_end.first << " end index " << start_end.second << " output_data_numel " << output_data_numel << " num_threads " <<  num_threads << std::endl;
+  //print_lock.unlock();
 }
 
 void init_tensor_meta_data( size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, const mxArray* input_mxArray ){
@@ -248,19 +264,7 @@ void init_sparse_tensor(double** target_data, size_t** target_indices_full_cardi
   // print_lock.unlock();
 }
 
-void init_sparse_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
-  init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
-
-  output_data_numel_nzmax = output_data_numel * 0.2; // TODO: how to set nzmax value?
-  //std::cout << "wtf output_data_numel " << output_data_numel << " output_data_numel_nzmax " << output_data_numel_nzmax << std::endl;
-  output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
-  mxSetProperty( target_mxArray, 0, "data", output_data_mx );
-  output_data = (double*) mxGetPr(output_data_mx);
-  output_irs = mxGetIr( output_data_mx );
-  output_jcs = mxGetJc( output_data_mx );
-}
-
-void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
+mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
   output_indices_mx = mxGetProperty( target_mxArray, 0, "indices" );
   output_indices_length = mxGetNumberOfElements( output_indices_mx );
   //std::cout << "SLM output_indices_length " << output_indices_length << std::endl;
@@ -296,9 +300,27 @@ void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_ind
       output_data_array_cardinalities[output_data_array_cardinalities_index] = 1;
     }
   }
+  return output_data_array_cardinalities;
+}
+
+void init_sparse_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
+  init_output_tensor_meta_data(target_mxArray);
+  init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
+
+  output_data_numel_nzmax = output_data_numel * 1; // TODO: how to set nzmax value?
+  //std::cout << "wtf output_data_numel " << output_data_numel << " output_data_numel_nzmax " << output_data_numel_nzmax << std::endl;
+  output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
+  mxSetProperty( target_mxArray, 0, "data", output_data_mx );
+  output_data = (double*) mxGetPr(output_data_mx);
+  output_irs = mxGetIr( output_data_mx );
+  output_jcs = mxGetJc( output_data_mx );
+}
+
+void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
+  mwSize* output_data_array_cardinalities = init_output_tensor_meta_data(target_mxArray);
+  init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray);
   output_data_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities, mxDOUBLE_CLASS, mxREAL);
   output_data = (double*) mxGetData(output_data_mx);
-  init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray);
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -371,7 +393,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     //print_lock.unlock();
     
   }
-  
+
   // generate contraction_index_inds
   contraction_index_inds = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
   contraction_index_inds_length = 0;
@@ -393,6 +415,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
   }
 
+  // print_lock.lock();
+  // for ( size_t i=0; i<contraction_index_inds_length; i++ ){
+  //   std::cout << "found contraction index: " << contraction_index_inds[i] << std::endl;
+  // }
+  // print_lock.unlock();
+
   pthread_t threads[num_threads];
   int rc;
   for( intptr_t i=0; i < num_threads; i++ ){
@@ -411,6 +439,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       exit(EXIT_FAILURE);
     }
   }
+  std::cout << "gtp_mex: all compute_output_tensor_part complete" << std::endl;
 
-  mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
+  //mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
 }

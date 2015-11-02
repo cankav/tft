@@ -21,25 +21,30 @@ function [] = pre_process()
         % reshape tensor data
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Tensor' )
+                % populate Tensor.index_ids
+                tensor_index_len = evalin('base', [ 'length(' vars(var_ind).name '.indices);' ]);
+                index_ids = zeros( 1, tensor_index_len );
+                for tensor_index_ind = 1:tensor_index_len
+                    cmd = [ vars(var_ind).name '.indices{' num2str(tensor_index_ind)  '}.id;' ];
+                    index_ids( tensor_index_ind ) = evalin('base', cmd);
+                end
+                cmd = [vars(var_ind).name '.index_ids = [' num2str(index_ids) '];'];
+                evalin('base', cmd)
+
+                % insert tft_indices to tensor structure
+                evalin('base', ['global tft_indices ; ' vars(var_ind).name '.tft_indices = tft_indices; ']);
+                
                 if evalin('base', ['issparse(' vars(var_ind).name '.data)']) == 1
                     % convert sparse matrices into sparse arrays
                     evalin( 'base', ['pre_process_sparse_obj_size = size(' vars(var_ind).name '.data);'] );
                     if evalin('base', [ 'pre_process_sparse_obj_size(2) ~= 1' ] )
                         evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                        cmd = [vars(var_ind).name '.reshaped = 1;'];
+                        evalin('base', cmd)
                     end
+
                 else
                     TFT_Tensors{ evalin('base', [vars(var_ind).name '.id'] ) } = evalin('base', vars(var_ind).name );
-
-                    % populate Tensor.index_ids
-                    tensor_index_len = evalin('base', [ 'length(' vars(var_ind).name '.indices);' ]);
-                    index_ids = zeros( 1, tensor_index_len );
-                    for tensor_index_ind = 1:tensor_index_len
-                        cmd = [ vars(var_ind).name '.indices{' num2str(tensor_index_ind)  '}.id;' ];
-                        index_ids( tensor_index_ind ) = evalin('base', cmd);
-                    end
-                    cmd = [vars(var_ind).name '.index_ids = [' num2str(index_ids) '];'];
-                    evalin('base', cmd)
-
 
                     % make sure dimension of the data are in the same order as in tft_indices
                     permute_array=[];
@@ -92,9 +97,6 @@ function [] = pre_process()
 
                     % insert original_indices_permute_array to tensor structure
                     evalin('base', [vars(var_ind).name '.original_indices_permute_array = [ ' num2str(original_indices_permute_array) '];']);
-
-                    % insert tft_indices to tensor structure
-                    evalin('base', ['global tft_indices ; ' vars(var_ind).name '.tft_indices = tft_indices; ']);
 
                     % insert missing dimensions
                     reshape_array = [];
