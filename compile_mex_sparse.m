@@ -32,7 +32,7 @@ pre_process();
 mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp % c++11 for print mutex lock
 %mex -largeArrayDims CXXFLAGS='-fPIC -fpermissive'  gtp_mex.cpp
 gtp_mex_time = tic;
-gtp_mex(1, X, Z1, Z2); % TODO: how to implement parallel output_irs write?
+gtp_mex(1, X, Z1, Z2); % TODO: how to implement parallel output_irs write? %%% IF assume output full -> can run parallel
 display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
 
 assert( sum_all_dims( float_diff( reshape(X_dot_product', [prod(size(X_dot_product)), 1]), squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
