@@ -38,8 +38,18 @@ function [] = pre_process()
                     % convert sparse matrices into sparse arrays
                     evalin( 'base', ['pre_process_sparse_obj_size = size(' vars(var_ind).name '.data);'] );
                     if evalin('base', [ 'pre_process_sparse_obj_size(2) ~= 1' ] )
-                        evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                        dim1_index_order = evalin('base', [ 'find( [' num2str(1:length(tft_indices)) '] == ' vars(var_ind).name '.indices{1}.id );']);
+                        dim2_index_order = evalin('base', [ 'find( [' num2str(1:length(tft_indices)) '] == ' vars(var_ind).name '.indices{2}.id );']);
+                        if dim1_index_order > dim2_index_order
+                            evalin('base', [ vars(var_ind).name '.data =  reshape( transpose(' vars(var_ind).name '.data), [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                        else
+                            evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                        end
+                                             
                         cmd = [vars(var_ind).name '.reshaped = 1;'];
+
+                        % TODO: calculate original_indices_permute_array
+
                         evalin('base', cmd)
                     end
 

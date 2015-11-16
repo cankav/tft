@@ -32,7 +32,7 @@ classdef Tensor < handle
 
             switch s(1).type
               case '.'
-                sref = builtin('subsref',obj,s);
+                sref = builtin('subsref', obj, s);
               case '()'
                 % s.subs must contain an index configuration from index set of the full tensor, v \in C_I(I)
                 % TODO: indices cardinality check
@@ -43,7 +43,7 @@ classdef Tensor < handle
 
                 else
                     % remove indices with zero cardinality
-                    strides = [obj.tft_aindices.cardinality] .* (size(obj.data)~=1);
+                    strides = [obj.tft_indices.cardinality] .* (size(obj.data)~=1);
                     strides = strides( strides ~= 0 );
                     % first dimension has stride 1
                     strides = [ 1 cumprod(strides(1:end-1)) ];

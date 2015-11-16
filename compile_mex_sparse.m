@@ -1,6 +1,9 @@
 clear all;
+
+%dbstop pre_process 43
+
 tft_clear();
-randn('seed',0);
+rand('seed',0);
 
 %% initialize test model data
 movie_index = Index(177);
@@ -17,7 +20,14 @@ Z1.data = sparse( rand(topic_index.cardinality, movie_index.cardinality) > (1-sp
 Z2.data = sparse( rand(topic_index.cardinality, user_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, user_index.cardinality);
 
 % prepare base case result
-X_dot_product = Z2.data' * Z1.data;
+X_dot_product = Z1.data' * Z2.data;
+%nnz(X_dot_product)
+%numel(X_dot_product)
+%X_dot_product(1:10)
+
+
+Z1_orig_data = Z1.data;
+Z2_orig_data = Z2.data;
 
 pre_process();
 
@@ -35,4 +45,4 @@ gtp_mex_time = tic;
 gtp_mex(1, X, Z1, Z2); % TODO: how to implement parallel output_irs write? %%% IF assume output full -> can run parallel
 display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
 
-assert( sum_all_dims( float_diff( reshape(X_dot_product', [prod(size(X_dot_product)), 1]), squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );
+assert( sum_all_dims( float_diff( reshape(X_dot_product, [prod(size(X_dot_product)), 1]), squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of standard implementation and dot product are different.' );

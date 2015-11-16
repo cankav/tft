@@ -1,6 +1,6 @@
 clear all;
 tft_clear();
-randn('seed',0);
+rand('seed',0);
 
 %% initialize test model data
 movie_index = Index(177);
