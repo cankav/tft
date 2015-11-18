@@ -1,5 +1,4 @@
-# tft
-Tensor Factorization Toolbox
+# Tensor Factorization Toolbox
 
 test_tft.m explains all current functionality.
 
