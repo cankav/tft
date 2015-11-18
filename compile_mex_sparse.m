@@ -1,14 +1,11 @@
 clear all;
-
-%dbstop pre_process 43
-
 tft_clear();
 rand('seed',0);
 
 %% initialize test model data
 movie_index = Index(177);
 user_index = Index(480);
-topic_index = Index(5000);
+topic_index = Index(1000);
 
 X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
@@ -21,22 +18,11 @@ Z2.data = sparse( rand(topic_index.cardinality, user_index.cardinality) > (1-spa
 
 % prepare base case result
 X_dot_product = Z1.data' * Z2.data;
-%nnz(X_dot_product)
-%numel(X_dot_product)
-%X_dot_product(1:10)
 
-
-Z1_orig_data = Z1.data;
-Z2_orig_data = Z2.data;
+%Z1_orig_data = Z1.data;
+%Z2_orig_data = Z2.data;
 
 pre_process();
-
-%Z1.data
-%nnz(Z1.data)
-%nnz(Z1.data) / numel(Z1.data)
-%Z2.data
-%nnz(Z2.data)
-%nnz(Z2.data) / numel(Z2.data)
 
 % fpermissive is required to conform with gtp(X, Z1, Z2) syntax, otherwise syntax must be X=gtp(Z1,Z2)
 mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp % c++11 for print mutex lock

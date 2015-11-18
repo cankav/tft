@@ -149,6 +149,10 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
 	  //std::cout << "yes " << output_data[output_irs_index] << std::endl;
 	}
       }else{
+	// print_lock.lock();
+	// std::cout << "output_numel_index " << output_numel_index << " numel " << mxGetNumberOfElements(output_data_mx) << std::endl;
+	// print_lock.unlock();
+
 	output_data[output_numel_index] +=
 	  get_tensor_data_by_full_index_configuration_dense(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel) *
 	  get_tensor_data_by_full_index_configuration_dense(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel);
@@ -245,7 +249,7 @@ void* compute_output_tensor_part(void *args){
       //compute_output_tensor_part_helper_call_count = 0;
       compute_output_tensor_part_helper(output_full_index_configuration, output_numel_index);
 
-      if ( output_data[output_irs_index] != 0 ){
+      if ( is_sparse == true && output_data[output_irs_index] != 0 ){
 	output_irs[output_irs_index] = output_numel_index;
 	output_irs_index++;
 	if ( output_irs_index == output_data_numel_nzmax ){
@@ -293,7 +297,9 @@ void init_tensor_meta_data( size_t** target_indices_full_cardinality, size_t* ta
       size_t current_cardinality = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, tft_indices_ind, "cardinality")))))[0]);
       (*target_indices_full_cardinality)[tft_indices_ind] = current_cardinality;
       *target_data_numel *= (*target_indices_full_cardinality)[tft_indices_ind];
-      //std::cout << "wtf 2: current_cardinality " << current_cardinality << " tft_indices_ind" << tft_indices_ind << " target_data_numel " << *target_data_numel << std::endl;
+      // print_lock.lock();
+      // std::cout << "wtf 2: current_cardinality " << current_cardinality << " tft_indices_ind" << tft_indices_ind << " target_data_numel " << *target_data_numel << std::endl;
+      // print_lock.unlock();
 
       (*target_indices_full_strides)[tft_indices_ind] = current_stride; // TODO: check data access order - stride order
       current_stride *= current_cardinality;
@@ -504,7 +510,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       contraction_index_inds_length++;
     }
   }
-
   // print_lock.lock();
   // for ( size_t i=0; i<contraction_index_inds_length; i++ ){
   //   std::cout << "found contraction index: " << contraction_index_inds[i] << std::endl;
@@ -515,7 +520,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   int rc;
   for( intptr_t i=0; i < num_threads; i++ ){
     rc = pthread_create(&threads[i], NULL, compute_output_tensor_part, (void *)i);
-
     if (rc){
       std::cout << "gtp_mex: error unable to create thread " << rc << " " << strerror(rc) << std::endl;
       exit(-1);
@@ -529,17 +533,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       exit(EXIT_FAILURE);
     }
   }
-  std::cout << "gtp_mex: all compute_output_tensor_part complete" << std::endl;
+  //std::cout << "gtp_mex: all compute_output_tensor_part complete" << std::endl;
 
-  output_jcs[1] = output_irs_index;
-  mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
-  size_t nnz = 0;
-  for(size_t i=0; i<output_data_numel; i++){
-    if( output_data[i] != 0 )
-    //  std::cout << output_data[i] << std::endl;
-    nnz ++;
+  if( is_sparse == true ){
+    output_jcs[1] = output_irs_index;
+
+    // size_t nnz = 0;
+    // for(size_t i=0; i<output_data_numel; i++){
+    //   if( output_data[i] != 0 )
+    // 	//  std::cout << output_data[i] << std::endl;
+    // 	nnz ++;
+    // }
+    // std::cout << "gtp_mex: OUTPUT NNZ " << nnz << std::endl;
+
   }
-  std::cout << "gtp_mex: OUTPUT NNZ " << nnz << std::endl;
+
+  mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
 }
 
 

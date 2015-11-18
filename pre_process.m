@@ -45,7 +45,7 @@ function [] = pre_process()
                         else
                             evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
                         end
-                                             
+
                         cmd = [vars(var_ind).name '.reshaped = 1;'];
 
                         % TODO: calculate original_indices_permute_array
