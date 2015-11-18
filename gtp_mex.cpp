@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdint.h>
-#include <mutex> // for cout lock
+//#include <mutex> // for cout lock
 #include <math.h>
 #include <algorithm> // for std::binary_search
 
@@ -45,7 +45,7 @@ size_t* contraction_index_inds; //indexes tft_indices
 size_t contraction_index_inds_length;
 
 // TODO comment this mutex code, no need to depend on c++-11 for proper printing
-std::mutex print_lock;
+//std::mutex print_lock;
 
 bool is_sparse;
 bool is_sparse_input0;
