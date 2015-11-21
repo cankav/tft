@@ -19,7 +19,7 @@ mxArray* output_data_mx;
 mwIndex* output_irs;
 size_t output_irs_index;
 mwIndex* output_jcs;
-size_t output_data_numel;
+size_t output_data_maximum_numel;
 size_t output_data_numel_nzmax;
 size_t* output_index_cardinalities;
 size_t* output_indices_full_cardinality;
@@ -51,7 +51,15 @@ bool is_sparse;
 bool is_sparse_input0;
 bool is_sparse_input1;
 
+const size_t INITIAL_SPARSE_NZMAX = 100; // TODO: increase this number after testing
+const float GROW_FACTOR = 1.5;
+
 //size_t compute_output_tensor_part_helper_call_count = 0;
+
+// static void clear_mem(void){
+//   mxFree( output_irs );
+//   mxFree( output_data );
+// }
 
 // http://stackoverflow.com/a/446327/1056345
 template<class Iter, class T>
@@ -67,13 +75,13 @@ Iter binary_find(Iter begin, Iter end, T val)
 }
 
 std::pair <size_t,size_t> get_thr_output_data_start_end(int tid){
-  size_t step_size = output_data_numel / num_threads;
+  size_t step_size = output_data_maximum_numel / num_threads;
   size_t thr_output_data_index_start = tid * step_size;
   size_t thr_output_data_index_end;
   if ( tid < (num_threads-1)){
     thr_output_data_index_end = (tid+1) * step_size;
   }else{
-    thr_output_data_index_end = output_data_numel;
+    thr_output_data_index_end = output_data_maximum_numel;
   }
   return std::make_pair(thr_output_data_index_start, thr_output_data_index_end);
 }
@@ -101,7 +109,7 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
   }
 
   if ( tensor_numel_index < 0 || tensor_numel_index >= tensor_data_numel ){
-    std::cout << "ERROR: get_tensor_data_by_index_configuration_dense tensor_numel_index " << tensor_numel_index << " can not be smaller than zero or greater than tensor_data_numel " << tensor_data_numel << std::endl;
+    std::cout << "ERROR: get_tensor_data_by_index_configuration_sparse tensor_numel_index " << tensor_numel_index << " can not be smaller than zero or greater than tensor_data_numel " << tensor_data_numel << std::endl;
     return 0;
   }
 
@@ -192,7 +200,36 @@ void* compute_output_tensor_part(void *args){
 	output_irs[output_irs_index] = output_numel_index;
 	output_irs_index++;
 	if ( output_irs_index == output_data_numel_nzmax ){
-	  std::cout << "ERROR output_irs_index == output_data_numel_nzmax" << std::endl;
+	  // increase output size by GROW_FACTOR
+	  size_t nbytes;
+	  size_t new_numel = output_data_numel_nzmax * GROW_FACTOR;
+
+	  nbytes = new_numel * sizeof(double);
+	  double* newptr_pr = (double*) mxRealloc(output_data, nbytes);
+	  //mexMakeMemoryPersistent(newptr_pr);
+	  mxSetPr(output_data_mx, newptr_pr);
+	  output_data = (double*) mxGetData(output_data_mx);
+
+	  // double* ptr = mxGetPi(output_data_mx);
+	  // double* newptr;
+	  // if(ptr != NULL) {
+	  //   newptr = (double*) mxRealloc(ptr, nbytes);
+	  //   mxSetPi(output_data_mx, newptr);
+	  //   std::cout << "yes" << std::endl;
+	  // }
+
+	  nbytes = new_numel * sizeof(mwIndex);
+	  mwIndex* newptr_ir = (mwIndex*) mxRealloc(output_irs, nbytes);
+	  //mexMakeMemoryPersistent(newptr_ir);
+	  mxSetIr(output_data_mx, newptr_ir);
+	  output_irs = mxGetIr(output_data_mx);
+
+	  //output_jcs = mxGetJc(output_data_mx);
+
+	  mxSetNzmax(output_data_mx, new_numel);
+
+	  output_data_numel_nzmax = new_numel;
+	  std::cout << "compute_output_tensor_part grow sparse output data to new_numel " << new_numel << std::endl;
 	}
       }
     }
@@ -278,8 +315,8 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
 void init_sparse_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
   init_output_tensor_meta_data(target_mxArray);
   init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
-  output_data_numel_nzmax = output_data_numel * 1; // TODO: how to set nzmax value?
-  output_data_mx = mxCreateSparse(output_data_numel, 1, output_data_numel_nzmax, mxREAL);
+  output_data_numel_nzmax = INITIAL_SPARSE_NZMAX;
+  output_data_mx = mxCreateSparse(INITIAL_SPARSE_NZMAX, 1, output_data_numel_nzmax, mxREAL);
   output_data = (double*) mxGetData(output_data_mx);
 
   output_irs = mxGetIr( output_data_mx );
@@ -332,7 +369,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if ( is_sparse == true ){
     // sparse init
 
-    init_sparse_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_numel, &output_indices_full_strides);
+    init_sparse_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
 
     if ( is_sparse_input0 == true ){
       init_sparse_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ], &input0_irs, &input0_jcs);
@@ -349,7 +386,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }else{
     // dense init
 
-    init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_numel, &output_indices_full_strides);
+    init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
     init_dense_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ]);
     init_dense_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ]);    
   }
@@ -397,7 +434,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     output_jcs[1] = output_irs_index;
   }
 
+  mxSetM(output_data_mx, output_data_maximum_numel);
   mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
+  //mexAtExit(clear_mem);
 }
 
 
