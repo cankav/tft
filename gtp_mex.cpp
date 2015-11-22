@@ -432,9 +432,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   if( is_sparse == true ){
     output_jcs[1] = output_irs_index;
+    mxSetM(output_data_mx, output_data_maximum_numel);
   }
 
-  mxSetM(output_data_mx, output_data_maximum_numel);
   mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
   //mexAtExit(clear_mem);
 }
