@@ -6,6 +6,8 @@
 //#include <mutex> // for cout lock
 #include <math.h>
 #include <algorithm> // for std::binary_search
+#include <unordered_map>
+#include <stdexcept>
 
 int num_threads;
 
@@ -33,6 +35,7 @@ mwIndex* input0_jcs;
 size_t input0_data_numel;
 size_t* input0_indices_full_cardinality;
 size_t* input0_indices_full_strides;
+std::unordered_map<size_t,double> input0_cache;
 
 double* input1_data;
 mwIndex* input1_irs;
@@ -40,6 +43,7 @@ mwIndex* input1_jcs;
 size_t input1_data_numel;
 size_t* input1_indices_full_cardinality;
 size_t* input1_indices_full_strides;
+std::unordered_map<size_t,double> input1_cache;
 
 size_t* contraction_index_inds; //indexes tft_indices
 size_t contraction_index_inds_length;
@@ -51,7 +55,7 @@ bool is_sparse;
 bool is_sparse_input0;
 bool is_sparse_input1;
 
-const size_t INITIAL_SPARSE_NZMAX = 100; // TODO: increase this number after testing
+const size_t INITIAL_SPARSE_NZMAX = 100000; // TODO: increase this number after testing
 const float GROW_FACTOR = 1.5;
 
 //size_t compute_output_tensor_part_helper_call_count = 0;
@@ -100,24 +104,38 @@ double get_tensor_data_by_full_index_configuration_dense(double* tensor_data, si
   }
 }
 
-double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, size_t* index_configuration, size_t* tensor_indices_full_strides, size_t tensor_data_numel, mwIndex* target_irs, mwIndex* target_jcs){
+double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, size_t* index_configuration, size_t* tensor_indices_full_strides, size_t tensor_data_numel, mwIndex* target_irs, mwIndex* target_jcs, std::unordered_map<size_t,double>* cache, size_t output_numel_index){
   // search for given index, return stored value if given index is found, otherwise return zero
-  size_t tensor_numel_index = 0;
-  for (int tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++){
-    tensor_numel_index += index_configuration[tft_indices_ind] * tensor_indices_full_strides[tft_indices_ind];
-    //std::cout << "get_tensor_data_by_full_index_configuration_sparse tensor_numel_index " << tensor_numel_index << " " << index_configuration[tft_indices_ind] << " * " << tensor_indices_full_strides[tft_indices_ind] << std::endl;
-  }
 
-  if ( tensor_numel_index < 0 || tensor_numel_index >= tensor_data_numel ){
-    std::cout << "ERROR: get_tensor_data_by_index_configuration_sparse tensor_numel_index " << tensor_numel_index << " can not be smaller than zero or greater than tensor_data_numel " << tensor_data_numel << std::endl;
-    return 0;
-  }
+  // query cache first
+  try {
+    //std::cout << "query " << output_numel_index << std::endl;
+    return cache->at(output_numel_index);
+  }catch (const std::out_of_range& oor){
+    //std::cout << "miss " << output_numel_index << std::endl;
+    size_t tensor_numel_index = 0;
+    for (int tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++){
+      tensor_numel_index += index_configuration[tft_indices_ind] * tensor_indices_full_strides[tft_indices_ind];
+      //std::cout << "get_tensor_data_by_full_index_configuration_sparse tensor_numel_index " << tensor_numel_index << " " << index_configuration[tft_indices_ind] << " * " << tensor_indices_full_strides[tft_indices_ind] << std::endl;
+    }
 
-  mwIndex* result = binary_find(target_irs, target_irs+target_jcs[1], tensor_numel_index);
-  if ( result == target_irs+target_jcs[1] ){
-    return 0;
-  }else{
-    return tensor_data[ result - target_irs ];
+    if ( tensor_numel_index < 0 || tensor_numel_index >= tensor_data_numel ){
+      std::cout << "ERROR: get_tensor_data_by_index_configuration_sparse tensor_numel_index " << tensor_numel_index << " can not be smaller than zero or greater than tensor_data_numel " << tensor_data_numel << std::endl;
+      return 0;
+    }
+
+    mwIndex* result = binary_find(target_irs, target_irs+target_jcs[1], tensor_numel_index);
+    if ( result == target_irs+target_jcs[1] ){
+      //std::cout << "store1 " << output_numel_index << " 0" << std::endl;
+      cache->insert( {output_numel_index, 0} );
+      //std::cout << "store1 complete" << std::endl;
+      return 0;
+    }else{
+      //std::cout << "store2 " << output_numel_index << " " << tensor_data[result - target_irs] << std::endl;
+      cache->insert( {output_numel_index, tensor_data[result - target_irs]} );
+      //std::cout << "store2 complete" << std::endl;
+      return tensor_data[ result - target_irs ];
+    }
   }
 }
 
@@ -133,8 +151,8 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
     if ( increment_index_ind == (contraction_index_inds_length-1) ){
       if ( is_sparse == true ){
 	// TODO: input tensors may or may not be sparse!
-	output_data[output_irs_index] += ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs ) *
-					   get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs ) );
+	output_data[output_irs_index] += ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs, &input0_cache, output_numel_index) *
+					   get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs, &input1_cache, output_numel_index) );
 
       }else{
 	output_data[output_numel_index] +=
@@ -178,8 +196,8 @@ void* compute_output_tensor_part(void *args){
       if ( is_sparse == true ){
 	 output_irs[output_numel_index] = output_numel_index;
 	 // TODO: input tensors may or may not be sparse!
-	output_data[output_numel_index] +=  ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs ) *
-					      get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs ) );
+	 output_data[output_numel_index] +=  ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs, &input0_cache, output_numel_ind) *
+					       get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs, &input1_cache, output_numel_ind) );
 
       }else{
 	output_data[output_numel_index] =
