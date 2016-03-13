@@ -15,12 +15,14 @@ Z1.data = rand( topic_index.cardinality, movie_index.cardinality );
 Z2.data = rand( topic_index.cardinality, user_index.cardinality );
 
 % prepare base case result
+%x_dot_product_time = tic;
 X_dot_product = Z2.data' * Z1.data;
+%display( [ 'matlab product time: ' num2str(toc(x_dot_product_time)) ] );
 
 pre_process();
 
 % fpermissive is required to conform with gtp(X, Z1, Z2) syntax, otherwise syntax must be X=gtp(Z1,Z2)
-mex -largeArrayDims CXXFLAGS='-std=c++11 -fPIC -fpermissive'  gtp_mex.cpp
+mex -largeArrayDims CXXFLAGS='-O3 -std=c++11 -fPIC -fpermissive'  gtp_mex.cpp
 gtp_mex_time = tic;
 gtp_mex(16, X, Z1, Z2);
 display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
