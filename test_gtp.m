@@ -46,6 +46,7 @@ gtp_mex(16, X, Z1, Z2);
 display( [ 'gtp_mex dense trial time: ' num2str(toc(gtp_mex_time)) char(10)] );
 assert( sum_all_dims( float_diff(X_dot_product', squeeze(X.data)) ) == 0, 'test_tft:test_tft', 'Result of dense mex implementation and dot product are different.' );
 
+%% gtp_mex sparse trial
 % initialize with random data, 1% sparsity
 sparsity = 0.01;
 Z1.data = sparse( rand(topic_index.cardinality, movie_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, movie_index.cardinality);
@@ -53,8 +54,6 @@ Z2.data = sparse( rand(topic_index.cardinality, user_index.cardinality) > (1-spa
 X_dot_product = Z2.data' * Z1.data;
 tft_indices = [];
 pre_process();
-
-%% gtp_mex sparse trial
 gtp_mex_time = tic;
 gtp_mex(16, X, Z1, Z2);
 display( [ 'gtp_mex sparse trial time: ' num2str(toc(gtp_mex_time)) ] );

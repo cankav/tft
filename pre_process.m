@@ -1,15 +1,19 @@
 function [] = pre_process()
-    tic
+    %tic
     global tft_indices
     global TFT_Tensors
-    TFT_Tensors = {};
 
     if length(tft_indices) == 0
+        TFT_Tensors = {};
 
         % generate tft_indices
         vars = evalin('base', 'whos');
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Index' )
+                % set name property
+                cmd = [vars(var_ind).name '.name = ''' vars(var_ind).name ''';'];
+                evalin('base', cmd);
+
                 tft_indices = [ tft_indices evalin( 'base', vars(var_ind).name ) ];
             end
         end
@@ -21,6 +25,10 @@ function [] = pre_process()
         % reshape tensor data
         for var_ind = 1:length(vars)
             if strcmp( vars(var_ind).class, 'Tensor' )
+                % set name property
+                cmd = [vars(var_ind).name '.name = ''' vars(var_ind).name ''';'];
+                evalin('base', cmd)
+
                 % populate Tensor.index_ids
                 tensor_index_len = evalin('base', [ 'length(' vars(var_ind).name '.indices);' ]);
                 index_ids = zeros( 1, tensor_index_len );
@@ -142,5 +150,5 @@ function [] = pre_process()
             end
         end
     end
-    display( [ ' pre_process time: ' num2str(toc) ] );
+    %display( [ ' pre_process time: ' num2str(toc) ] );
 end

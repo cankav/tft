@@ -3,6 +3,7 @@ classdef Index < handle
     properties
         id
         cardinality;
+        name;
     end
 
     methods
