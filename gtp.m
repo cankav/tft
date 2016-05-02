@@ -15,12 +15,12 @@ function [] = gtp(output_tensor, varargin)
     adj_mat = generate_tensor_indices_adj_mat( args{:} );
 
     global tft_indices;
-    global TFT_Tensor_index
-    global TFT_Tensors
+    global TFT_Tensor_index;
+    global TFT_Tensors;
     contraction_indices = tft_indices ( logical ( sum( bsxfun( @times, ...
-                                                                adj_mat(output_tensor.id, : ) == 0, ...
-                                                                adj_mat( find(1:(TFT_Tensor_index-1) ~= output_tensor.id), : ) == 1 ...
-                                                                ) ) ) );
+                                                      adj_mat(output_tensor.id, : ) == 0, ...
+                                                      adj_mat( find(1:(TFT_Tensor_index-1) ~= output_tensor.id), : ) == 1 ...
+                                                      ) ) ) );
 
     for ci_ind = 1:length(contraction_indices)
         % tensors with data on current contraction dimension
@@ -47,4 +47,5 @@ function [] = gtp(output_tensor, varargin)
     % last temporary tensor data holds the result, 
     % expecting output_tensor to be defined beforehand without the data field
     output_tensor.data = tmp_tensor.data;
+    %size(output_tensor.data)
 end

@@ -23,6 +23,8 @@ classdef TFDefaultEngine < handle
 
         function [] = factorize(obj)
             for it_num = 1:obj.iteration_number
+                obj.tfmodel.factorization_model{1}.data(1:10)
+                obj.tfmodel.X_hat_tensors(1).data(1:10)
                 iteration_tic = tic;
                 display([ char(10) 'iteration ' num2str(it_num) ]);
                 for rule_ind = 1:length(obj.gtp_rules)
@@ -33,11 +35,12 @@ classdef TFDefaultEngine < handle
                     end
                     display_rule( obj.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
 
-                    for ri = 1:length(obj.gtp_rules)
-                        display_rule( obj.gtp_rules{ri}, ri, 'ALL RULES ' );
-                    end
+                    %for ri = 1:length(obj.gtp_rules)
+                    %    display_rule( obj.gtp_rules{ri}, ri, 'ALL RULES ' );
+                    %end
 
                     if obj.gtp_rules{rule_ind}{1} == 'GTP'
+                        assert( sum_all_dims(size(obj.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
                         input = obj.gtp_rules{rule_ind}{3};
                         gtp( obj.gtp_rules{rule_ind}{2}, input{:} );
                     else
