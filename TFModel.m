@@ -125,14 +125,14 @@ classdef TFModel < handle
                 obj.d2_Q_v(end).name = ['d2_Q_v_' num2str(alpha)];
             end
 
-            % update each X_hat
-            for X_hat_ind = 1:length(obj.X_hat_tensors)
-                latent_tensors = obj.factorization_model{X_hat_ind*2};
-                gtp_rules{end+1} = { 'GTP', obj.X_hat_tensors(X_hat_ind), latent_tensors };
-            end
-
             % update each Z_alpha
             for alpha = 1:length(obj.Z_alpha)
+                % update each X_hat
+                for X_hat_ind = 1:length(obj.X_hat_tensors)
+                    latent_tensors = obj.factorization_model{X_hat_ind*2};
+                    gtp_rules{end+1} = { 'GTP', obj.X_hat_tensors(X_hat_ind), latent_tensors };
+                end
+
                 first_v = true;
                 for v = find( obj.coupling_matrix(:, obj.Z_alpha_tensor_ids(alpha)) )
                     observed_tensor_fm_ind = v*2-1;

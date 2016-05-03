@@ -25,6 +25,8 @@ classdef TFDefaultEngine < handle
             for it_num = 1:obj.iteration_number
                 obj.tfmodel.factorization_model{1}.data(1:10)
                 obj.tfmodel.X_hat_tensors(1).data(1:10)
+                obj.tfmodel.Z_alpha(1).data(1:10)
+                obj.tfmodel.Z_alpha(2).data(1:10)
                 iteration_tic = tic;
                 display([ char(10) 'iteration ' num2str(it_num) ]);
                 for rule_ind = 1:length(obj.gtp_rules)
