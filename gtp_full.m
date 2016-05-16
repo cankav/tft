@@ -24,7 +24,7 @@ function [] = gtp_full(output_tensor, varargin)
     for i = 1:length(varargin)
         F.data = bsxfun( @times, F.data, varargin{i}.data );
     end
-    display( [ ' generate F: ' num2str(toc) ] );
+    %display( [ ' generate F: ' num2str(toc) ] );
 
     % contract F tensor over indices not present in output_tensor
     tic;
@@ -34,5 +34,5 @@ function [] = gtp_full(output_tensor, varargin)
         end
     end
     output_tensor.data = F.data;
-    display( [ ' contact time: ' num2str(toc) ] );
+    %display( [ ' contact time: ' num2str(toc) ] );
 end

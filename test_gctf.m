@@ -27,7 +27,15 @@ nmf_model = TFModel(factorization_model, p, phi);
 gtp_rules = nmf_model.update_rules()
 
 % apply update rule GTP operations 10 times, without any optimizations
-engine = TFDefaultEngine(nmf_model, 10)
+engine = TFDefaultEngine(nmf_model, 10, 'gtp_full');
+engine.factorize();
+plot(engine.kl_divergence);
+
+engine = TFDefaultEngine(nmf_model, 10, 'gtp');
+engine.factorize();
+plot(engine.kl_divergence);
+
+engine = TFDefaultEngine(nmf_model, 10, 'gtp_mex');
 engine.factorize();
 plot(engine.kl_divergence);
 
