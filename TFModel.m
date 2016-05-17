@@ -105,9 +105,9 @@ classdef TFModel < handle
             obj.d2_alpha = [];
             for alpha = 1:length(obj.Z_alpha)
                 zalpha_indices = obj.Z_alpha(alpha).indices;
-                obj.d1_alpha = [ obj.d1_alpha create_tensor( cellfun( @(index) index.id, zalpha_indices ) ) ];
+                obj.d1_alpha = [ obj.d1_alpha create_tensor( cellfun( @(index) index.id, zalpha_indices ), 'zeros' ) ];
                 obj.d1_alpha(end).name = ['d1_alpha_' num2str(alpha)];
-                obj.d2_alpha = [ obj.d2_alpha create_tensor( cellfun( @(index) index.id, zalpha_indices ) ) ];
+                obj.d2_alpha = [ obj.d2_alpha create_tensor( cellfun( @(index) index.id, zalpha_indices ), 'zeros' ) ];
                 obj.d2_alpha(end).name = ['d2_alpha_' num2str(alpha)];
                 obj.d1_delta = [ obj.d1_delta create_tensor( cellfun( @(index) index.id, zalpha_indices ), 'zeros' ) ];
                 obj.d1_delta(end).name = ['d1_delta_' num2str(alpha)];
@@ -118,10 +118,10 @@ classdef TFModel < handle
             obj.d2_Q_v = [];
             for v = 1:length(obj.X_hat_tensors) %find( obj.coupling_matrix(:, obj.Z_alpha_tensor_ids(alpha)) )
                 X_indices = obj.X_hat_tensors(v).indices;
-                obj.d1_Q_v = [ obj.d1_Q_v create_tensor( cellfun( @(index) index.id, X_indices ) ) ];
+                obj.d1_Q_v = [ obj.d1_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), 'zeros' ) ];
                 obj.d1_Q_v(end).name = ['d1_Q_v_' num2str(v)];
                 
-                obj.d2_Q_v = [ obj.d2_Q_v create_tensor( cellfun( @(index) index.id, X_indices ) ) ];
+                obj.d2_Q_v = [ obj.d2_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), 'zeros' ) ];
                 obj.d2_Q_v(end).name = ['d2_Q_v_' num2str(alpha)];
             end
 
@@ -138,7 +138,7 @@ classdef TFModel < handle
                     observed_tensor_fm_ind = v*2-1;
                     gtp_rules{end+1} = { '=',
                                         obj.d1_Q_v(v),
-                                        ['obj.tfmodel.factorization_model{' num2str(observed_tensor_fm_ind) '}.data .* arrayfun(@(x) x.^-' num2str(obj.p_vector(v)) ', obj.tfmodel.X_hat_tensors(' num2str(v) ').data);'] };
+                                        ['obj.config.tfmodel.factorization_model{' num2str(observed_tensor_fm_ind) '}.data .* arrayfun(@(x) x.^-' num2str(obj.p_vector(v)) ', obj.config.tfmodel.X_hat_tensors(' num2str(v) ').data);'] };
 
                     Z_alpha_inds = find(obj.coupling_matrix(v,:));
                     Z_alpha_bar_inds = Z_alpha_inds;
@@ -149,14 +149,14 @@ classdef TFModel < handle
                                         {obj.d1_Q_v(v), obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha ) ) } };
 
                     if first_v
-                        gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.tfmodel.d1_delta(' num2str(alpha) ').data'] };
+                        gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d1_delta(' num2str(alpha) ').data'] };
                     else
-                        gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.tfmodel.d1_alpha(' num2str(alpha) ').data + obj.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.tfmodel.d1_delta(' num2str(alpha) ').data'] };
+                        gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.config.tfmodel.d1_alpha(' num2str(alpha) ').data + obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d1_delta(' num2str(alpha) ').data'] };
                     end
 
                     gtp_rules{end+1} = { '=',
                                         obj.d2_Q_v(v),
-                                        ['arrayfun(@(x) x.^(1-' num2str(obj.p_vector(v)) '), obj.tfmodel.X_hat_tensors(' num2str(v) ').data);'] };
+                                        ['arrayfun(@(x) x.^(1-' num2str(obj.p_vector(v)) '), obj.config.tfmodel.X_hat_tensors(' num2str(v) ').data);'] };
 
                     Z_alpha_inds = find(obj.coupling_matrix(v,:));
                     Z_alpha_bar_inds = Z_alpha_inds;
@@ -167,17 +167,17 @@ classdef TFModel < handle
                                         {obj.d2_Q_v(v), obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha ) ) } };
 
                     if first_v
-                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.tfmodel.phi_vector(' num2str(v) ')^-2 .* obj.tfmodel.d2_delta(' num2str(alpha) ').data'] };
+                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-2 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
                         first_v = false;
                     else
-                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.tfmodel.d2_alpha(' num2str(alpha) ').data + obj.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.tfmodel.d2_delta(' num2str(alpha) ').data'] };
+                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.d2_alpha(' num2str(alpha) ').data + obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
                     end
 
                     first_v = false;
                 end % v loop
 
                 % update Z_alpha with d1/d2
-                gtp_rules{end+1} = { '=', obj.Z_alpha(alpha), ['obj.tfmodel.Z_alpha(' num2str(alpha) ').data .* obj.tfmodel.d1_alpha(' num2str(alpha) ').data ./ obj.tfmodel.d2_alpha('  num2str(alpha) ').data'] };
+                gtp_rules{end+1} = { '=', obj.Z_alpha(alpha), ['obj.config.tfmodel.Z_alpha(' num2str(alpha) ').data .* obj.config.tfmodel.d1_alpha(' num2str(alpha) ').data ./ obj.config.tfmodel.d2_alpha('  num2str(alpha) ').data'] };
             end % alpha loop
 
         end
