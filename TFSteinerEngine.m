@@ -18,10 +18,11 @@ classdef TFSteinerEngine < handle
 
             obj.draw_dot = false;
             if nargin == 3
-                if (isunix() == 1 && system('which dot') == 0) == 0
+                if (isunix() == 1 && system('dot -h &> /dev/null') ~= 127) == 0
                     display( 'Steiner tree depends on graphviz (dot) on unix platforms for drawing graphs, graphs will be unavailable' )
                 else
                     obj.draw_dot = true;
+                    system('if [ ! -d dot_files ]; then mkdir dot_files; fi');
                     obj.base_filename = base_filename;
                 end
             end
@@ -30,7 +31,7 @@ classdef TFSteinerEngine < handle
 
         end
 
-        function [cost] = get_operation_cost(obj, mode, dim_ind, op_state, parent_costs, available_memory)
+        function [cost] = get_operation_cost(~, mode, dim_ind, op_state, parent_costs, available_memory)
         % calculate cost of an contract/sum/mult operation over a given dimension in 
         % a given state of the model
         % mem: extra memory usage
@@ -59,7 +60,7 @@ classdef TFSteinerEngine < handle
                 t = dim_sizes .* fill_in_tensor_dims;
                 t( t==0 ) = 1; % prod identity is 1
                 fill_in_tensor_size = prod(t);
-                cost.mem = fill_in_tensor_size;
+                cost.mem = fill_in_tensor_size * 8; % assume double data elements with 8 bytes of storage
 
                 % lookup: for each element of the output we will lookup once 
                 % to fetch corresponding element of each input tensor for 
@@ -77,11 +78,11 @@ classdef TFSteinerEngine < handle
 
             elseif strcmp(mode, 'mult')
                 % memory: size of tmp tensor
-                fill_in_tensor_dims = tmp_tensor_dims;
+                %fill_in_tensor_dims = tmp_tensor_dims;
                 t = dim_sizes .* tmp_tensor_dims;
                 t( t==0 ) = 1; % prod identity is 1
                 tmp_tensor_size = prod(t);
-                cost.mem = tmp_tensor_size;
+                cost.mem = tmp_tensor_size * 8; % assume double data elements with 8 bytes of storage
 
                 % lookup: for each element of the output we will lookup once
                 % to fetch corresponding element of each input tensor
@@ -101,7 +102,7 @@ classdef TFSteinerEngine < handle
                 t = dim_sizes .* fill_in_tensor_dims;
                 t( t==0 ) = 1; % prod identity is 1
                 fill_in_tensor_size = prod(t);
-                cost.mem = fill_in_tensor_size;
+                cost.mem = fill_in_tensor_size * 8; % assume double data elements with 8 bytes of storage
 
                 % lookup: for each element of the output we will lookup once
                 % to fetch corresponding element of the only input tensor for
@@ -138,14 +139,14 @@ classdef TFSteinerEngine < handle
             if nargin == 6
                 % we do not accept solutions requiring more memory
                 if cost.mem > available_memory
-                    display([ 'get_operation_cost: available memory exceeded with ' num2str(cost.mem) ' on operation over dimension ' tft_indices(dim_ind).name ]);
+                    display([ 'get_operation_cost: available memory exceeded with ' num2str(cost.mem) ' on operation over dimension ' tft_indices(dim_ind).name ' available memory ' num2str(available_memory) ]);
                     cost.mem = flintmax;
                     cost.compute = flintmax;
                 end
             end
         end
 
-        function [optimal_operations steiner_tree] = get_optimal_operations(obj, gtp_group_id)
+        function [optimal_operations, steiner_tree] = get_optimal_operations(obj, gtp_group_id)
             global tft_indices;
 
             %global states state_connections costs
@@ -157,22 +158,21 @@ classdef TFSteinerEngine < handle
             costs = {};
             operation_types = sparse(0); % from, to = c (contraction) / s (sum) / m (mult)
             operation_gtp_inds = sparse(0); % from, to
-            processing_state = 1;
             state_labels = {};
             edge_labels = containers.Map();
             if isunix
-                available_memory = get_free_mem(); % MB
+                available_memory = get_free_mem()*10; % MB
                 available_memory = available_memory * 1e6; % bytes
             else
                 % TODO: test
-                [u,s] = memory;
+                [u,~] = memory;
                 available_memory = u.MemAvailableAllArrays; %bytes
             end
 
             node_offset = 0;
             if obj.draw_dot
-                dot_filename = [obj.base_filename '_' num2str(gtp_group_id) '.dot'];
-                svg_filename = [obj.base_filename '_' num2str(gtp_group_id) '.svg'];
+                dot_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.dot'];
+                svg_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.svg'];
                 dot_text = containers.Map();
                 dot_text( 'digraph {' ) = 1;
             end
@@ -186,7 +186,7 @@ classdef TFSteinerEngine < handle
                 if obj.gtp_rule_group_ids(gtp_adj_mat_ind) == gtp_group_id
                     output_tensor = obj.config.gtp_rules{gtp_adj_mat_ind}{2};
                     input_tensors = obj.config.gtp_rules{gtp_adj_mat_ind}{3};
-                    gtp_adj_mats{end+1} = generate_tensor_indices_adj_mat( output_tensor, input_tensors{:} );
+                    gtp_adj_mats{end+1} = generate_tensor_indices_adj_mat_output_first( output_tensor, input_tensors{:} );
                 end
             end
 
@@ -198,7 +198,7 @@ classdef TFSteinerEngine < handle
 
                 if obj.draw_dot
                     if gtp_adj_mat_ind == 1
-                        [img_dot node_offset] = write_dot_svg(states{processing_state}, length(states), node_offset, gtp_group_id);
+                        [img_dot, node_offset] = write_dot_svg(states{processing_state}, length(states), node_offset, gtp_group_id, obj.base_filename);
                         dot_text(img_dot) = 1;
                     end
                 end
@@ -210,11 +210,11 @@ classdef TFSteinerEngine < handle
                         break
                     end
 
-                    if isscalar(states{processing_state})
-                        display([ char(10) 'processing state ' num2str(processing_state) ' for gtp_adj_mat_ind ' num2str(gtp_adj_mat_ind) ' detour to ' num2str(states{processing_state}) ]);
-                    else
-                        display([ char(10) 'processing state ' num2str(processing_state) ' for gtp_adj_mat_ind ' num2str(gtp_adj_mat_ind) ]);
-                    end
+                    % if isscalar(states{processing_state})
+                    %     display([ char(10) 'processing state ' num2str(processing_state) ' for gtp_adj_mat_ind ' num2str(gtp_adj_mat_ind) ' detour to ' num2str(states{processing_state}) ]);
+                    % else
+                    %     display([ char(10) 'processing state ' num2str(processing_state) ' for gtp_adj_mat_ind ' num2str(gtp_adj_mat_ind) ]);
+                    % end
 
                     if isscalar( states{processing_state} )
                         % go back to a previously generated state to generate paths for gtp_adj_mat_ind > 1 so that contraction operation can be detected correctly
@@ -235,16 +235,16 @@ classdef TFSteinerEngine < handle
                         cur_state = cur_state( logical(cur_state_mask), : );
 
                         actual_observed_factor = cur_state(1,:);
-                        display('actual_observed_factor');
-                        display(full(actual_observed_factor));
-                        display('cur_state updated');
-                        display(full(cur_state));
+                        % display('actual_observed_factor');
+                        % display(full(actual_observed_factor));
+                        % display('cur_state updated');
+                        % display(full(cur_state));
                     else
                         actual_processing_state = 0;
                         cur_state = states{processing_state};
                     end
 
-                    display( 'starting search' );
+                    %display( 'starting search' );
                     %display(full(cur_state));
 
                     observed_dims_mask = ~cur_state(1,:);
@@ -276,7 +276,7 @@ classdef TFSteinerEngine < handle
                             new_states{end+1} = new_state;
                             new_operation_types(end+1) = 's';
 
-                            new_states_costs{end+1} = gtp_adj_mats{gtp_adj_mat_ind}.get_operation_cost( 'sum', ...
+                            new_states_costs{end+1} = obj.get_operation_cost( 'sum', ...
                                                                               contraction_dims(cdi), ...
                                                                               cur_state, ...
                                                                               costs{processing_state}, ...
@@ -296,7 +296,7 @@ classdef TFSteinerEngine < handle
                             new_states{end+1} = new_state;
                             new_operation_types(end+1) = 'm';
 
-                            new_states_costs{end+1} = gtp_adj_mats(gtp_adj_mat_ind).get_operation_cost( 'mult', ...
+                            new_states_costs{end+1} = obj.get_operation_cost( 'mult', ...
                                                                               contraction_dims(cdi), ...
                                                                               cur_state, ...
                                                                               costs{processing_state}, ...
@@ -311,7 +311,7 @@ classdef TFSteinerEngine < handle
                             new_states{end+1} = new_state;
                             new_operation_types(end+1) = 'c';
 
-                            new_states_costs{end+1} = gtp_adj_mats(gtp_adj_mat_ind).get_operation_cost( 'contract', ...
+                            new_states_costs{end+1} = obj.get_operation_cost( 'contract', ...
                                                                               contraction_dims(cdi), ...
                                                                               cur_state, ...
                                                                               costs{processing_state}, ...
@@ -389,7 +389,7 @@ classdef TFSteinerEngine < handle
                                 state_connections(processing_state, found) = 1;
                                 operation_types(processing_state, found) = new_operation_types(nsi);
                                 
-                                display(['add found connection ' num2str(processing_state) ' -> ' num2str(found) ]);
+                                %display(['add found connection ' num2str(processing_state) ' -> ' num2str(found) ]);
                                 %display(['processing_state ' gtp_adj_mats(gtp_adj_mat_ind).dims(contraction_dims(cdi)).name]);
                                 %display(full( states{processing_state} ));
 
@@ -415,10 +415,10 @@ classdef TFSteinerEngine < handle
                                     if ~detour_seen_before
                                         states{end+1} = found;
                                         costs{end+1} = costs{found};
-                                        display(['insert new detour state ' num2str(length(states)) ]);
+                                        %display(['insert new detour state ' num2str(length(states)) ]);
                                     else
-                                        display(['NOT re-insert detour state ' num2str(found) ]);
-                                        display( full( states{found} ) );
+                                        %display(['NOT re-insert detour state ' num2str(found) ]);
+                                        %display( full( states{found} ) );
                                     end
                                 end
                             else
@@ -433,7 +433,7 @@ classdef TFSteinerEngine < handle
                                 state_connections(processing_state, length(states)) = 1;
                                 operation_types(processing_state, length(states)) = new_operation_types(nsi);
 
-                                display(['add new connection ' num2str(processing_state) ' -> ' num2str(length(states)) ]);
+                                %display(['add new connection ' num2str(processing_state) ' -> ' num2str(length(states)) ]);
 
                                 %display(['processing_state ' gtp_adj_mats(gtp_adj_mat_ind).dims(contraction_dims(cdi)).name]);
                                 %display(full( states{processing_state} ));
@@ -444,11 +444,11 @@ classdef TFSteinerEngine < handle
                                     dot_text( ['n' num2str(processing_state) '->' 'n' num2str(length(states))  '[label="' new_state_edge_labels{nsi} '" color=black];'] ) = 1;
                                 end
                                 operation_dim_inds(processing_state, length(states)) = contraction_dims(cdi);
-                                operation_gtp_inds(processing_state, found) = gtp_adj_mat_ind;
+                                operation_gtp_inds(processing_state, length(states)) = gtp_adj_mat_ind;
                                 state_labels{processing_state+1} = [ num2str(processing_state+1) ]; %' ' gtp_adj_mats(gtp_adj_mat_ind).dims( contraction_dims(cdi) ).name ' ' num2str(compute_cost)];
 
                                 if obj.draw_dot
-                                    [img_dot node_offset] = gtp_adj_mats(gtp_adj_mat_ind). write_dot_svg( states{length(states)}, length(states), node_offset, gtp_group_id, processing_state );
+                                    [img_dot node_offset] = write_dot_svg( states{length(states)}, length(states), node_offset, gtp_group_id, obj.base_filename, processing_state );
                                     dot_text(img_dot) = 1;
                                 end
                                 
@@ -471,7 +471,9 @@ classdef TFSteinerEngine < handle
 
                  %display(['end start processing_state ' num2str(processing_state) ' length ' num2str(length(states)) ]);
 
-                 gtp_terminals(end+1) = length(states)
+                 if ~isscalar(states{end})
+                     gtp_terminals(end+1) = length(states);
+                 end
 
             end % end gtp_adj_mat_ind = 1:length(gtp_adj_mats)
 
@@ -505,7 +507,7 @@ classdef TFSteinerEngine < handle
                  for nc_inds_ind = 1:length(nc_inds)
                      % try all available terminals
                      for ut_ind = 1:length(unused_terminals)
-                         display(['find path from ' num2str(nc_inds(nc_inds_ind)) ' to ' num2str(unused_terminals(ut_ind))]);
+                         %display(['find path from ' num2str(nc_inds(nc_inds_ind)) ' to ' num2str(unused_terminals(ut_ind))]);
                          [dist, path] = graphshortestpath(edge_weights, nc_inds(nc_inds_ind), unused_terminals(ut_ind));
                          if dist < min_dist
                              min_dist = dist;
@@ -521,13 +523,13 @@ classdef TFSteinerEngine < handle
                      path_str = [ path_str ' ' num2str(min_dist_path(mdp_ind-1)) ];
                  end
                  path_str = [ path_str ' ' num2str(min_dist_path(end)) ];
-                 display([ 'add path: ' path_str char(10)]);
+                 %display([ 'add path: ' path_str char(10)]);
 
                  % remove terminal x from unused_terminals
                  unused_terminals( unused_terminals == min_dist_path(end) ) = [];
 
                  % stop if we have used all terminals
-                 if length(unused_terminals) == 0
+                 if isempty(unused_terminals)
                      break
                  end
 
@@ -535,21 +537,24 @@ classdef TFSteinerEngine < handle
 
 
              % generate optimal_operations
-             from_inds = find(steiner_tree);
-             for fi_ind = 1:length(from_inds)
-                 from_ind = from_inds(fi_ind);
-                 to_ind = find(steiner_tree(from_ind,:));
-                 operation.index = operation_dim_inds( from_ind, to_ind );
-                 operation.type = operation_types( from_ind, to_ind );
-                 operation.gtp_index = operation_gtp_inds( from_ind, to_ind );
-                 optimal_operations(end+1) = operation;
+             [from_inds, to_inds] = find(steiner_tree);
+             for i_ind = 1:length(from_inds)
+                 from_ind = from_inds(i_ind);
+                 to_ind = to_inds(i_ind);
+                 if ~(from_ind == 1 && to_ind == 1)
+                     operation.index = operation_dim_inds( from_ind, to_ind );
+                     operation.type = operation_types( from_ind, to_ind );
+                     operation.gtp_index = operation_gtp_inds( from_ind, to_ind );
+                     optimal_operations = [optimal_operations operation];
+                 end
              end
 
 
              if obj.draw_dot
                  dot_text( '}' ) = 1;
                  % write keys to file
-                 system(['rm ' dot_filename]);
+                 cmd = ['if [ -f ' dot_filename ' ]; then rm ' dot_filename '; fi'];
+                 system(cmd);
                  dot_text_keys = keys(dot_text);
                  selected_to_inds = [];
                  for i = 1:length(dot_text_keys)
@@ -589,7 +594,7 @@ classdef TFSteinerEngine < handle
                      system(cmd);
                  end
 
-                 system(['rm ' svg_filename '; dot -Tsvg ' dot_filename ' > ' svg_filename ' ; #display ' svg_filename ]);
+                 system(['if [ -f ' svg_filename ' ]; then rm ' svg_filename '; fi; dot -Tsvg ' dot_filename ' > ' svg_filename ' ; #display ' svg_filename ]);
              end
 
          end
@@ -598,11 +603,13 @@ classdef TFSteinerEngine < handle
              % calculate optimal path in steiner tree for each group
              gtp_group_optimal_operations = [];
              for gg_ind = 1:length(obj.gtp_group_ids)
-                 gtp_group_optimal_operations(end+1) = obj.get_optimal_operations(obj.gtp_group_ids(gg_ind));
-                 display(gtp_group_optimal_operations(end));
+                 ops = obj.get_optimal_operations(obj.gtp_group_ids(gg_ind));
+                 display([char(10) 'optimal operations for gtp group id ' gg_ind]);
+                 for i = 1:length(ops)
+                     display_steiner_tree_operation( ops(i) );
+                 end
+                 gtp_group_optimal_operations = [ gtp_group_optimal_operations ops ];
              end
-
-             
          end
     end
 end

@@ -1,4 +1,4 @@
-function [dot_text node_offset] = get_dot_cluster_from_adj_mat(adj_mat, cluster_id, node_offset, parent_cluster_id)
+function [dot_text, node_offset] = get_dot_cluster_from_adj_mat(adj_mat, cluster_id, node_offset, parent_cluster_id)
 % adj_mat: rows are factors, cols are dimensions, first row is observed, rest are latent factors ordered in obj.factors, see get_adjacency_matrix
 % inter_cluster_text is not used, can be removed
 

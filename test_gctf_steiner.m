@@ -21,15 +21,13 @@ phi = [1]; % dispersion parameter
 factorization_model = {X, {Z1, Z2}}; % factorization model
 
 nmf_model = TFModel(factorization_model, p, phi);
-
 % generate GTP operations for GCTF update rules
-gtp_rules = nmf_model.update_rules()
-
+gtp_rules = nmf_model.update_rules();
 % apply update rule GTP operations 10 times, without any optimizations
 config = TFEngineConfig(nmf_model, 10);
-engine = TFSteinerEngine(config, [ 1, -1, 1, -1, -1, 1, -1, -1, 2, -1, 2, -1, -1, 2, -1, -1 ]);
+engine = TFSteinerEngine(config, [ 1, -1, 1, -1, -1, 1, -1, -1, 2, -1, 2, -1, -1, 2, -1, -1 ], 'steiner_test');
 engine.factorize();
-figure
-plot(engine.kl_divergence);
+%figure
+%plot(engine.kl_divergence);
 
 
