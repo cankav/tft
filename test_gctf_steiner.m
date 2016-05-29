@@ -27,7 +27,7 @@ gtp_rules = nmf_model.update_rules();
 config = TFEngineConfig(nmf_model, 10);
 engine = TFSteinerEngine(config, [ 1, -1, 1, -1, -1, 1, -1, -1, 2, -1, 2, -1, -1, 2, -1, -1 ], 'steiner_test');
 engine.factorize();
-%figure
-%plot(engine.kl_divergence);
+figure
+plot(engine.kl_divergence);
 
 

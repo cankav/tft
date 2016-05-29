@@ -27,10 +27,10 @@ gtp_rules = nmf_model.update_rules()
 
 test_gtp_modes = {'gtp_full', 'gtp', 'gtp_mex'};
 for i = 1:length(test_gtp_modes)
+    display(['testing in ' test_gtp_modes{i} ' mode']);
     % apply update rule GTP operations 10 times, without any optimizations
     config = TFEngineConfig(nmf_model, 10);
     engine = TFDefaultEngine(config, test_gtp_modes{i});
     engine.factorize();
     plot(engine.kl_divergence);
-    break;
 end

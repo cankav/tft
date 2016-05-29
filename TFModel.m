@@ -180,8 +180,8 @@ classdef TFModel < handle
                 gtp_rules{end+1} = { '=', obj.Z_alpha(alpha), ['obj.config.tfmodel.Z_alpha(' num2str(alpha) ').data .* obj.config.tfmodel.d1_alpha(' num2str(alpha) ').data ./ obj.config.tfmodel.d2_alpha('  num2str(alpha) ').data'] };
             end % alpha loop
 
-        end
+        end % update_rules
 
-    end
+    end % methods
 
 end

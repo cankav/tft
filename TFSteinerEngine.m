@@ -4,8 +4,9 @@ classdef TFSteinerEngine < handle
         base_filename;
         draw_dot;
         config;
-        gtp_rule_group_ids;
-        gtp_group_ids;
+        gtp_rule_group_ids; % group ids of each gtp rules, -1 if rule is not a gtp rule
+        gtp_group_ids; % unique group ids
+        %gtp_inter_group_inds; % indices of gtp operations within their respective groups
     end
 
     methods
@@ -15,6 +16,17 @@ classdef TFSteinerEngine < handle
             assert( issorted(non_negative_gtp_rule_group_ids), 'TFSteinerEngine:TFSteinerEngine', 'gtp_rule_group_ids argument must be sorted (excluding -1 values)' );
             obj.gtp_rule_group_ids = gtp_rule_group_ids;
             obj.gtp_group_ids = unique(non_negative_gtp_rule_group_ids);
+
+            % inter_group_index = 1;
+            % for i = 1:length(gtp_rule_group_ids)
+            %     if gtp_rule_group_ids(i) == -1
+            %         inter_group_index = 1;
+            %         gtp_inter_group_inds(i) = -1;
+            %     else
+            %         gtp_inter_group_inds(i) = inter_group_index;
+            %         inter_group_index = inter_group_index + 1;
+            %     end
+            % end
 
             obj.draw_dot = false;
             if nargin == 3
@@ -161,7 +173,7 @@ classdef TFSteinerEngine < handle
             state_labels = {};
             edge_labels = containers.Map();
             if isunix
-                available_memory = get_free_mem()*10; % MB
+                available_memory = get_free_mem()*10; % MB % TODO: x10 virtual memory??
                 available_memory = available_memory * 1e6; % bytes
             else
                 % TODO: test
@@ -171,8 +183,8 @@ classdef TFSteinerEngine < handle
 
             node_offset = 0;
             if obj.draw_dot
-                dot_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.dot'];
-                svg_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.svg'];
+                dot_filename = [obj.base_filename '_' num2str(gtp_group_id) '.dot'];
+                svg_filename = [obj.base_filename '_' num2str(gtp_group_id) '.svg'];
                 dot_text = containers.Map();
                 dot_text( 'digraph {' ) = 1;
             end
@@ -594,22 +606,82 @@ classdef TFSteinerEngine < handle
                      system(cmd);
                  end
 
-                 system(['if [ -f ' svg_filename ' ]; then rm ' svg_filename '; fi; dot -Tsvg ' dot_filename ' > ' svg_filename ' ; #display ' svg_filename ]);
+                 system(['if [ -f ' svg_filename ' ]; then rm ' svg_filename '; fi; cd dot_files && dot -Tsvg ' dot_filename ' > ' svg_filename ' ; #display ' svg_filename ]);
              end
 
          end
 
          function [] = factorize(obj)
              % calculate optimal path in steiner tree for each group
-             gtp_group_optimal_operations = [];
+
+             optimal_gtp_operations = [];
              for gg_ind = 1:length(obj.gtp_group_ids)
                  ops = obj.get_optimal_operations(obj.gtp_group_ids(gg_ind));
+                 optimal_gtp_operations = [optimal_gtp_operations ops];
                  display([char(10) 'optimal operations for gtp group id ' gg_ind]);
                  for i = 1:length(ops)
                      display_steiner_tree_operation( ops(i) );
                  end
-                 gtp_group_optimal_operations = [ gtp_group_optimal_operations ops ];
              end
+
+
+             total_tic = tic;
+             execution_times = zeros(length(obj.config.gtp_rules),1);
+             for it_num = 1:obj.config.iteration_number
+                 iteration_tic = tic;
+                 display([ char(10) 'iteration ' num2str(it_num) ]);
+                 for rule_ind = 1:length(obj.config.gtp_rules)
+                     % if iscell( obj.config.gtp_rules{rule_ind}{3} )
+                     %     input = num2str(cellfun( @(x) x.id, obj.config.gtp_rules{rule_ind}{3} ));
+                     % else
+                     %     input = obj.config.gtp_rules{rule_ind}{3};
+                     % end
+                     display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
+
+                     execution_tic = tic;
+                     if obj.config.gtp_rules{rule_ind}{1} == 'GTP'
+                         assert( sum_all_dims(size(obj.config.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
+
+                         gtp_group_index = find(obj.gtp_group_ids==obj.gtp_rule_group_ids(rule_ind));
+                         group_operations = optimal_gtp_operations(gtp_group_index);
+                         %gtp_inter_group_ind = gtp_inter_group_inds(rule_ind);
+                         %gtp_operations = group_operations(gtp_inter_group_ind);
+                         input_tensors = obj.config.gtp_rules{rule_ind}{3};
+                         output_tensor = obj.config.gtp_rules{rule_ind}{2};
+
+                         for operation_ind = 1:length(group_operations)
+                             operation = group_operations(operation_ind);
+                             if operation.type == 'c'
+                                 gtp_mex(16, output_tensor, input_tensors{:} );
+                             elseif ops(i).type == 's' || ops(i).type == 'm'
+                                 if ops(i).type == 's'
+                                     op = '@sum';
+                                 elseif ops(i).type == 'm'
+                                     op = '@times';
+                                 end
+
+                                 for it_ind = 1:length(input_tensors)
+                                     if it_ind == 1
+                                         output_tensor.data = bsxfun( @eq, output_tensor.data, input_tensors{it_ind}.data );
+                                     else
+                                         output_tensor.data = bsxfun( eval(op), output_tensor.data, input_tensors{it_ind}.data );
+                                     end
+                                 end
+                             end
+                         end
+
+                     else
+                         obj.config.gtp_rules{rule_ind}{2}.data = eval( obj.config.gtp_rules{rule_ind}{3} );
+                     end
+
+                     execution_times(rule_ind) = execution_times(rule_ind) + toc(execution_tic);
+                 end
+
+                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
+
+                 display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
+             end % end iteration
+             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
          end
     end
 end
