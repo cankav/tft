@@ -68,7 +68,7 @@ classdef TFModel < handle
                 end
             end
 
-            % generate coupling tensor
+            % generate coupling matrix
             obj.coupling_matrix = sparse(length(obj.factorization_model)/2, length(obj.factorization_model{fm_ind}));
             for fm_ind = 2:2:length(obj.factorization_model)
                 for factor_ind = 1:length(obj.factorization_model{fm_ind})
@@ -144,9 +144,11 @@ classdef TFModel < handle
                     Z_alpha_bar_inds = Z_alpha_inds;
                     zalpha = obj.Z_alpha(alpha);
                     Z_alpha_bar_inds( Z_alpha_bar_inds == zalpha.id ) = [];
+                    Z_alpha_bar_tensors = num2cell(obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha )));
+                    %display(Z_alpha_bar_inds);
                     gtp_rules{end+1} = { 'GTP',
                                         obj.d1_delta(alpha),
-                                        {obj.d1_Q_v(v), obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha ) ) } };
+                                        {obj.d1_Q_v(v),  Z_alpha_bar_tensors{:} } };
 
                     if first_v
                         gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d1_delta(' num2str(alpha) ').data'] };
@@ -162,9 +164,10 @@ classdef TFModel < handle
                     Z_alpha_bar_inds = Z_alpha_inds;
                     zalpha = obj.Z_alpha(alpha);
                     Z_alpha_bar_inds( Z_alpha_bar_inds == zalpha.id ) = [];
+                    Z_alpha_bar_tensors = num2cell(obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha ) ));
                     gtp_rules{end+1} = { 'GTP',
                                         obj.d2_delta(alpha),
-                                        {obj.d2_Q_v(v), obj.Z_alpha( arrayfun( @(x) (sum(Z_alpha_bar_inds==x.id)==1), obj.Z_alpha ) ) } };
+                                        {obj.d2_Q_v(v), Z_alpha_bar_tensors{:}} };
 
                     if first_v
                         gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-2 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };

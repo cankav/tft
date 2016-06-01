@@ -52,7 +52,7 @@ size_t* contraction_index_inds; //indexes tft_indices
 size_t contraction_index_inds_length;
 
 // TODO comment this mutex code, no need to depend on c++-11 for proper printing
-//std::mutex print_lock;
+std::mutex print_lock;
 
 bool is_sparse;
 bool is_sparse_input0;
@@ -167,6 +167,10 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
 	  get_tensor_data_by_full_index_configuration_dense(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel) *
 	  get_tensor_data_by_full_index_configuration_dense(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel);
       }
+      // print_lock.lock();
+      // std::cout << output_numel_index << " ";
+      // print_lock.unlock();
+      
     }else{
       return compute_output_tensor_part_helper( output_full_index_configuration, output_numel_index, increment_index_ind+1 );
     }
@@ -263,12 +267,26 @@ void* compute_output_tensor_part(void *args){
     }
   }
 }
+void print_meta_data( size_t** target_indices_full_cardinality, size_t** target_indices_full_strides, size_t* target_data_numel){
+  std::cout << "cardinalities:";
+  for (size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++){
+    std::cout << " " << (*target_indices_full_cardinality)[tft_indices_ind];
+  }
+  std::cout << std::endl;
+
+  std::cout << "strides:";
+  for (size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++){
+    std::cout << " " << (*target_indices_full_strides)[tft_indices_ind];
+  }
+  std::cout << std::endl;
+
+  std::cout << "target_data_numel: " << *target_data_numel << std::endl;
+}
 
 void init_tensor_meta_data( size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, const mxArray* target_mxArray){
   *target_data_numel = 1;
   *target_indices_full_cardinality = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
   *target_indices_full_strides = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
-
   mxArray* target_indices_mx = mxGetProperty( target_mxArray, 0, "indices" );
   size_t target_indices_length = mxGetNumberOfElements(target_indices_mx);
   size_t current_stride = 1;
@@ -294,7 +312,7 @@ void init_tensor_meta_data( size_t** target_indices_full_cardinality, size_t* ta
       (*target_indices_full_cardinality)[tft_indices_ind] = 0;
       (*target_indices_full_strides)[tft_indices_ind] = 0;
     }
-  }  
+  }
 }
 
 void init_dense_tensor( double** target_data, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, const mxArray* input_mxArray){
@@ -314,11 +332,21 @@ void init_sparse_tensor(double** target_data, size_t** target_indices_full_cardi
 mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
   output_indices_mx = mxGetProperty( target_mxArray, 0, "indices" );
   output_indices_length = mxGetNumberOfElements( output_indices_mx );
-  mwSize* output_data_array_cardinalities_size_dims = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
-  for ( int i=0; i<tft_indices_length; i++ )
-    output_data_array_cardinalities_size_dims[i] = 1;
-  mxArray* output_data_array_cardinalities_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities_size_dims, mxDOUBLE_CLASS, mxREAL);
-  mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
+  // mwSize* output_data_array_cardinalities_size_dims = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
+  // std::cout << "output_data_array_cardinalities_size_dims: ";
+  // for ( int i=0; i<tft_indices_length; i++ ){
+  //   output_data_array_cardinalities_size_dims[i] = 1;
+  //   std::cout << " " << output_data_array_cardinalities_size_dims[i];
+  // }
+  // std::cout << std::endl;
+  // std::cout << "init_output_tensor_meta_data " << tft_indices_length << std::endl;
+  // mxArray* output_data_array_cardinalities_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities_size_dims, mxDOUBLE_CLASS, mxREAL);
+  // if (output_data_mx == NULL){
+  //   mexErrMsgTxt("Can not create output_data_array_cardinalities_mx, not enough memory");
+  // }
+  // mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
+  mwSize* output_data_array_cardinalities = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
+
   size_t output_data_array_cardinalities_index = 0;
   for ( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
     bool found = false;
@@ -326,8 +354,8 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
       mxArray* prop_id = mxGetProperty( mxGetCell(output_indices_mx, output_indices_ind), 0, "id");
       size_t output_index_id = (size_t) ( ((double*)mxGetData(prop_id))[0] );
       if ( tft_indices_ids[tft_indices_ind] == output_index_id ){
+	//std::cout << "init_output_tensor_meta_data0 : " << output_data_array_cardinalities_index << " " << tft_indices_cardinalities[tft_indices_ind] << std::endl;
 	output_data_array_cardinalities[output_data_array_cardinalities_index] = tft_indices_cardinalities[tft_indices_ind];
-	//std::cout << "init_output_tensor_meta_data0 : " << output_data_array_cardinalities_index << " " << output_data_array_cardinalities[output_data_array_cardinalities_index] << std::endl;
 	output_data_array_cardinalities_index++;
 	found = true;
 	break;
@@ -335,13 +363,14 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
     }
     if ( found == false ){
       // dummy dimension (due to Matlab indexing compatability)
+      //std::cout << "init_output_tensor_meta_data0 : " << output_data_array_cardinalities_index << " " << 1 << std::endl;
       output_data_array_cardinalities[output_data_array_cardinalities_index] = 1;
       output_data_array_cardinalities_index++;
       //std::cout << "init_output_tensor_meta_data1 : " << output_data_array_cardinalities_index << " " << output_data_array_cardinalities[output_data_array_cardinalities_index] << std::endl;
     }
   }
 
-  //std::cout << "init_output_tensor_meta_data" << std::endl;
+  // std::cout << "init_output_tensor_meta_data" << std::endl;
   // for ( int i=0; i<tft_indices_length; i++){
   //   std::cout << std::dec << output_data_array_cardinalities[i] << std::endl;
   // }
@@ -362,6 +391,35 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
 //   output_jcs[0] = 0;
 // }
 
+void print_all_values(size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, std::vector<size_t> index_configuration=std::vector<size_t>(), size_t iter_index=0){
+  //std::cout << "print_all_values iter_index " << iter_index << std::endl;
+  if( index_configuration.size() == 0 ){
+    for (size_t i_ind=0; i_ind<tft_indices_length; i_ind++){
+      index_configuration.push_back(0);
+    }
+  }
+
+  for( size_t iter_value=0; iter_value<(*target_indices_full_cardinality)[iter_index]; iter_value++){
+    //std::cout << "print_all_values iter_value " << iter_value << std::endl;
+    index_configuration.at(iter_index) = iter_value;
+
+    if (iter_index != (tft_indices_length-1)){
+      print_all_values(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, index_configuration, iter_index+1);
+    }
+  }
+
+  if ( (*target_indices_full_cardinality)[iter_index] == 0 && iter_index != (tft_indices_length-1) ){
+    print_all_values(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, index_configuration, iter_index+1);
+  }
+
+  // if (iter_index == (tft_indices_length-1)){
+  //   for( size_t i=0; i<tft_indices_length; i++){
+  //     std::cout << " " << index_configuration[i];
+  //   }
+  //   std::cout << ": " << get_tensor_data_by_full_index_configuration_dense(output_data, &index_configuration[0], *target_indices_full_strides, *target_data_numel) << std::endl;
+  // }
+}
+
 void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
   mwSize* output_data_array_cardinalities = init_output_tensor_meta_data(target_mxArray);
   init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
@@ -380,6 +438,17 @@ void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_ind
   if (output_data == NULL){
     mexErrMsgTxt("init_dense_output_tensor: internal error: output data was not created");
   }
+
+  // mwSize* output_size = mxGetDimensions(output_data_mx);
+  // std::cout << "output size:";
+  // for ( int i=0; i<tft_indices_length; i++){
+  //   std::cout << " " << output_size[i];
+  // }
+  // std::cout << std::endl;
+  // std::cout << "print_meta_data" << std::endl;
+  // print_meta_data(target_indices_full_cardinality, target_indices_full_strides, target_data_numel);
+  // std::cout << "print_all_values" << std::endl;
+  // print_all_values(target_indices_full_cardinality, target_data_numel, target_indices_full_strides);
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -399,12 +468,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   tft_indices_length = mxGetNumberOfElements(tft_indices_mx);
   tft_indices_cardinalities = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
   tft_indices_ids = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
-
   for (int i=0; i<tft_indices_length; i++){
     tft_indices_cardinalities[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
     tft_indices_ids[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "id")))))[0]);
   }
-
   is_sparse = false;
   for (int prhs_ind=output_tensor_prhs_index; prhs_ind<=input1_tensor_prhs_index; prhs_ind++){
     bool is_tensor_sparse = mxIsSparse( mxGetProperty( prhs[ prhs_ind ], 0, "data" ) );
@@ -415,40 +482,33 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       is_sparse_input1 = is_tensor_sparse;
     }
   }
-
   init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
-
+  //std::cout << "init_tensor_meta_data output_data_maximum_numel " << output_data_maximum_numel << std::endl;
   if ( is_sparse == true ){
     // sparse init
 
     //init_sparse_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
-
     if ( is_sparse_input0 == true ){
       init_sparse_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ], &input0_irs, &input0_jcs);
     }else {
       init_dense_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ]);
     }
-
     if ( is_sparse_input1 == true ){
       init_sparse_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ], &input1_irs, &input1_jcs);
     }else {
       init_dense_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ]);
     }
-
     // initialize input caches
     input0_cache = (double*) malloc( sizeof(double) * (input0_data_numel) );
     input0_cache_bitmap = new std::vector<bool>(input0_data_numel);
     input1_cache = (double*) malloc( sizeof(double) * (input1_data_numel) );
     input1_cache_bitmap = new std::vector<bool>(input1_data_numel);
-
   }else{
     // dense init
-
     //init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
     init_dense_tensor(&input0_data, &input0_indices_full_cardinality, &input0_data_numel, &input0_indices_full_strides, prhs[ input0_tensor_prhs_index ]);
-    init_dense_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ]);    
+    init_dense_tensor(&input1_data, &input1_indices_full_cardinality, &input1_data_numel, &input1_indices_full_strides, prhs[ input1_tensor_prhs_index ]);
   }
-
   // generate contraction_index_inds
   contraction_index_inds = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
   contraction_index_inds_length = 0;
@@ -459,9 +519,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mxArray* prop_id = mxGetProperty( mxGetCell(output_indices_mx, output_indices_ind), 0, "id");
       size_t output_index_id = (size_t) ( ((double*)mxGetData(prop_id))[0] );
       if ( tft_indices_ids[tft_indices_ind] == output_index_id ){
-	// index appears in output tensor -> not contraction index
-	is_contraction_index = false;
-	break;
+  	// index appears in output tensor -> not contraction index
+  	is_contraction_index = false;
+  	break;
       }
     }
     if ( is_contraction_index == true ){
@@ -469,7 +529,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       contraction_index_inds_length++;
     }
   }
-
   pthread_t threads[num_threads];
   int rc;
   for( intptr_t i=0; i < num_threads; i++ ){
@@ -487,7 +546,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       exit(EXIT_FAILURE);
     }
   }
-
   // if( is_sparse == true ){
   //   output_jcs[1] = output_irs_index;
   //   mxSetM(output_data_mx, output_data_maximum_numel);

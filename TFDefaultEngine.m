@@ -21,6 +21,10 @@ classdef TFDefaultEngine < handle
                 iteration_tic = tic;
                 display([ char(10) 'iteration ' num2str(it_num) ]);
                 for rule_ind = 1:length(obj.config.gtp_rules)
+                    % if rule_ind == 10 || rule_ind == 18 || rule_ind == 26
+                    %     dbstop TFDefaultEngine 25
+                    % end
+
                     % if iscell( obj.config.gtp_rules{rule_ind}{3} )
                     %     input = num2str(cellfun( @(x) x.id, obj.config.gtp_rules{rule_ind}{3} ));
                     % else
@@ -52,6 +56,7 @@ classdef TFDefaultEngine < handle
                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 
                 display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
+
             end % end iteration
             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
         end

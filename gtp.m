@@ -22,9 +22,14 @@ function [] = gtp(output_tensor, varargin)
                                                       adj_mat( find(1:(TFT_Tensor_index-1) ~= output_tensor.id), : ) == 1 ...
                                                       ) ) ) );
 
+    used_tensor_ids = [];
     for ci_ind = 1:length(contraction_indices)
         % tensors with data on current contraction dimension
         ci_contraction_tensor_ids = find(adj_mat( :, contraction_indices(ci_ind).id ) == 1);
+
+        % filter tensors which have been used before in this GTP operation
+        ci_contraction_tensor_ids( ismember(ci_contraction_tensor_ids, used_tensor_ids) ) = [];
+        used_tensor_ids = [used_tensor_ids ci_contraction_tensor_ids'];
 
         % init temporary tensor for current contraction dimension
         tmp_tensor_index_ids = [];
@@ -32,7 +37,12 @@ function [] = gtp(output_tensor, varargin)
             tmp_tensor_index_ids = [tmp_tensor_index_ids TFT_Tensors{ci_contraction_tensor_ids(ctid_ind)}.index_ids];
         end
 
+        tmp_tensor_index_ids = unique(tmp_tensor_index_ids);
+        % do not add contraction dimension to tensor's dimensions
+        tmp_tensor_index_ids( tmp_tensor_index_ids==contraction_indices(ci_ind).id ) = [];
+        
         tmp_tensor = create_tensor( tmp_tensor_index_ids, 'ones' );
+        tmp_tensor.name = 'gtp_tmp_tensor';
         adj_mat(tmp_tensor.id, tmp_tensor.index_ids) = 1;
 
         % \prod operation: multiply contraction tensors into temporary tensor

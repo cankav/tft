@@ -2,32 +2,16 @@ clear all;
 tft_clear();
 rand('seed',0);
 
-%% initialize test model data
-movie_index = Index(177);
-user_index = Index(480);
-topic_index = Index(1000);
+test_model_type = 'nmf';
 
-X = Tensor( movie_index, user_index );
-Z1 = Tensor( topic_index, movie_index);
-Z2 = Tensor( topic_index, user_index );
+generate_test_model(test_model_type);
 
-X.data = rand(movie_index.cardinality, user_index.cardinality); % observed tensor data
-Z1.data = rand( topic_index.cardinality, movie_index.cardinality ); % randomly initialize latent tensors
-Z2.data = rand( topic_index.cardinality, user_index.cardinality ); 
-pre_process();
+model = TFModel(factorization_model, p, phi);
 
-p = [1]; % for KL divergence
-phi = [1]; % dispersion parameter
-factorization_model = {X, {Z1, Z2}}; % factorization model
+gtp_rules = model.update_rules();
 
-nmf_model = TFModel(factorization_model, p, phi);
-% generate GTP operations for GCTF update rules
-gtp_rules = nmf_model.update_rules();
-% apply update rule GTP operations 10 times, without any optimizations
-config = TFEngineConfig(nmf_model, 10);
+config = TFEngineConfig(model, 10);
 engine = TFSteinerEngine(config, [ 1, -1, 1, -1, -1, 1, -1, -1, 2, -1, 2, -1, -1, 2, -1, -1 ], 'steiner_test');
 engine.factorize();
 figure
 plot(engine.kl_divergence);
-
-
