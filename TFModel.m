@@ -122,7 +122,7 @@ classdef TFModel < handle
                 obj.d1_Q_v(end).name = ['d1_Q_v_' num2str(v)];
                 
                 obj.d2_Q_v = [ obj.d2_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), 'zeros' ) ];
-                obj.d2_Q_v(end).name = ['d2_Q_v_' num2str(alpha)];
+                obj.d2_Q_v(end).name = ['d2_Q_v_' num2str(v)];
             end
 
             % update each Z_alpha

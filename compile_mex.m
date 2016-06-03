@@ -3,9 +3,9 @@ tft_clear();
 rand('seed',0);
 
 %% initialize test model data
-movie_index = Index(177);
-user_index = Index(480);
-topic_index = Index(5000);
+movie_index = Index(7);
+user_index = Index(4);
+topic_index = Index(10);
 
 X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
