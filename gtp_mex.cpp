@@ -146,6 +146,7 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
 	contraction_index_value++ ){
     //print_lock.lock(); //std::cout << "osman201" << std::endl; print_lock.unlock();
 
+    //std::cout << "compute_output_tensor_part_helper: output_full_index_configuration[ contraction_index_inds[" << increment_index_ind << "] -> " << contraction_index_inds[increment_index_ind]  << " ] = " << contraction_index_value << std::endl;
     output_full_index_configuration[ contraction_index_inds[increment_index_ind] ] = contraction_index_value;
     //print_lock.lock(); //std::cout << "osman203" << std::endl; print_lock.unlock();
     if ( increment_index_ind == (contraction_index_inds_length-1) ){
@@ -166,10 +167,18 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
       }else{
 	//print_lock.lock(); //std::cout << "osman206" << std::endl; print_lock.unlock();
 	double product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
+	// std::cout << "output_full_index_configuration(0):";
+	// for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+	//   std::cout << " " << output_full_index_configuration[tft_indices_ind];
+	// }
+	// std::cout << " input_values: " << product;
 	for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
+	  //std::cout << " " << get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
 	  product *= get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
 	}
+	//std::cout << " prev " << output_data[output_numel_index] << " increment " << product << std::endl;
 	output_data[output_numel_index] += product;
+
 	//print_lock.lock(); //std::cout << "osman207" << std::endl; print_lock.unlock();
       }
       // print_lock.lock();
@@ -178,7 +187,7 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
       
     }else{
       //print_lock.lock(); //std::cout << "osman208" << std::endl; print_lock.unlock();
-      return compute_output_tensor_part_helper( output_full_index_configuration, output_numel_index, increment_index_ind+1 );
+      compute_output_tensor_part_helper( output_full_index_configuration, output_numel_index, increment_index_ind+1 );
     }
   }
   //print_lock.lock(); //std::cout << "osman209" << std::endl; print_lock.unlock();
@@ -241,7 +250,15 @@ void* compute_output_tensor_part(void *args){
   std::pair <size_t,size_t> start_end = get_thr_output_data_start_end(tid);
 
   size_t* output_full_index_configuration = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
-  int loop_count = 0;
+  // print_lock.lock();
+  // std::cout << "tft_indices_length " << tft_indices_length << std::endl;
+  // std::cout << "output_full_index_configuration(0):";
+  // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+  //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
+  // }
+  // std::cout << std::endl; print_lock.unlock();
+
+  //int loop_count = 0;
   //std::cout << "osman101" << std::endl;
   for ( size_t output_numel_ind=start_end.first; output_numel_ind<start_end.second; output_numel_ind++ ){
     //print_lock.lock(); //std::cout << "osman101" << std::endl; print_lock.unlock();
@@ -254,15 +271,35 @@ void* compute_output_tensor_part(void *args){
     //size_t right_hand_inds_step_divider = 1;
     size_t left_hand_inds_step_divider = 1;
     size_t output_numel_index = 0;
+    // print_lock.lock();
+    // std::cout << "\n\noutput_numel_ind " << output_numel_ind << std::endl;
     for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
       if ( output_indices_full_strides[tft_indices_ind] > 0 ){
+	// std::cout << "tft_indices_ind " << tft_indices_ind << " available" << std::endl;
+
 	output_full_index_configuration[tft_indices_ind] = ((size_t)floor(output_numel_ind / left_hand_inds_step_divider)) % tft_indices_cardinalities[tft_indices_ind];
 	//right_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
 	left_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
 	output_numel_index += output_full_index_configuration[tft_indices_ind] * output_indices_full_strides[tft_indices_ind];
+      }else{
+	output_full_index_configuration[tft_indices_ind] = 0;
       }
+
+      // std::cout << "output_full_index_configuration(1.1):";
+      // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+      // 	std::cout << " " << output_full_index_configuration[tft_indices_ind];
+      // }
+      // std::cout << std::endl;
+
     }
+    //print_lock.unlock();
+    
     //print_lock.lock(); //std::cout << "osman102" << std::endl; print_lock.unlock();
+    // print_lock.lock(); std::cout << "output_full_index_configuration(1):";
+    // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+    //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
+    // }
+    // std::cout << std::endl; print_lock.unlock();
 
     if ( contraction_index_inds_length == 0 ){
       // no contraction, just multiply and store result
@@ -293,7 +330,19 @@ void* compute_output_tensor_part(void *args){
 	output_data[output_numel_index] = 0;
       }
 
+      // print_lock.lock(); std::cout << "\n\noutput_full_index_configuration(2):";
+      // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+      // 	std::cout << " " << output_full_index_configuration[tft_indices_ind];
+      // }
+      // std::cout << std::endl; print_lock.unlock();
+
       compute_output_tensor_part_helper(output_full_index_configuration, output_numel_index);
+
+      // print_lock.lock(); std::cout << "output_full_index_configuration(3):";
+      // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+      // 	std::cout << " " << output_full_index_configuration[tft_indices_ind];
+      // }
+      // std::cout << std::endl; print_lock.unlock();
 
       // if ( is_sparse == true && output_data[output_irs_index] != 0 ){
       // 	output_irs[output_irs_index] = output_numel_index;
@@ -501,8 +550,8 @@ void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_ind
   //   std::cout << " " << output_data[i];
   // }
   // std::cout << std::endl;
-  // std::cout << "print_meta_data" << std::endl;
-  // print_meta_data(target_indices_full_cardinality, target_indices_full_strides, target_data_numel);
+  std::cout << "print_meta_data" << std::endl;
+  print_meta_data(target_indices_full_cardinality, target_indices_full_strides, target_data_numel);
   // std::cout << "output print_all_values" << std::endl;
   // print_all_values(output_data, mxIsSparse(output_data_mx), target_indices_full_cardinality, target_data_numel, target_indices_full_strides );
 }
@@ -530,7 +579,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   input_indices_full_strides = (size_t**) malloc( sizeof(size_t*) * input_length );
   input_cache = (double**) malloc( sizeof(double*) * input_length );
   input_cache_bitmap = (std::vector<bool>**) malloc( sizeof(std::vector<bool>*) * input_length );
-  input_cache_lock = new std::mutex[input_length]; //(std::mutex*) malloc( sizeof(std::mutex) * input_length );
+  input_cache_lock = new std::mutex[input_length];
 
   //std::cout << "osman1" << std::endl;
   tft_indices_mx = mexGetVariable("global", "tft_indices");
@@ -614,6 +663,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
   }
 
+  std::cout << "contraction_index_inds:";
+  for ( size_t tft_indices_ind=0; tft_indices_ind<contraction_index_inds_length; tft_indices_ind++ ){
+    std::cout << " " << contraction_index_inds[tft_indices_ind];
+  }
+  std::cout << std::endl;
   //std::cout << "osman4.1" << std::endl;
   pthread_t threads[num_threads];
   int rc;
@@ -641,11 +695,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   //std::cout << "osman6" << std::endl;
   mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
 
-  // std::cout << "created calculated output elements:";
-  // for ( int i=0; i<10; i++){
-  //   std::cout << " " << output_data[i];
-  // }
-  // std::cout << std::endl;
+  std::cout << "created calculated output elements:";
+  for ( int i=0; i<10; i++){
+    std::cout << " " << output_data[i];
+  }
+  std::cout << std::endl;
 
   //mexAtExit(clear_mem);
 }

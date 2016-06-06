@@ -15,15 +15,10 @@ gtp_rules = model.update_rules()
 
 test_gtp_modes = {'gtp_full', 'gtp', 'gtp_mex'};
 for i = 1:length(test_gtp_modes)
-
-    
-    i=3
-    
     display(['testing in ' test_gtp_modes{i} ' mode']);
     config = TFEngineConfig(model, 10);
     engine = TFDefaultEngine(config, test_gtp_modes{i});
     engine.factorize();
     plot(engine.kl_divergence);
-    break
     pause(3);
 end

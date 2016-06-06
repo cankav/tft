@@ -19,8 +19,22 @@ classdef TFDefaultEngine < handle
             execution_times = zeros(length(obj.config.gtp_rules),1);
             for it_num = 1:obj.config.iteration_number
                 iteration_tic = tic;
-                display([ char(10) 'iteration ' num2str(it_num) ]);
+                display([ char(10) char(10) char(10) 'iteration ' num2str(it_num) ]);
                 for rule_ind = 1:length(obj.config.gtp_rules)
+                    % if rule_ind == 8
+                    %     display('before rule');
+                    %     evalin('base', 'display(A.data(1:10))');
+                    % elseif rule_ind == 16
+                    %     display('before rule');
+                    %     evalin('base', 'display(B.data(1:10))');
+                    % elseif rule_ind == 24
+                    %     display('before rule');
+                    %     evalin('base', 'display(C.data(1:10))');
+                    % elseif rule_ind == 32
+                    %     display('before rule');
+                    %     evalin('base', 'display(G.data(1:10))');
+                    % end
+                                        
                     % if rule_ind == 10 || rule_ind == 18 || rule_ind == 26
                     %     dbstop TFDefaultEngine 25
                     % end
@@ -38,20 +52,45 @@ classdef TFDefaultEngine < handle
 
                     execution_tic = tic;
                     if obj.config.gtp_rules{rule_ind}{1} == 'GTP'
+                        %display('before gtp');
+                        before = obj.config.gtp_rules{rule_ind}{2}.data;
+                        %display(obj.config.gtp_rules{rule_ind}{2}.data(1:10));
                         assert( sum_all_dims(size(obj.config.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
                         input_tensors = obj.config.gtp_rules{rule_ind}{3};
                         if strcmp(obj.gtp_implementation_selection, 'gtp_mex')
-                            gtp_mex(16, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
+                            gtp_mex(1, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp')
                             gtp(obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp_full')
                             gtp_full(obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         end
+
+                        %display('after gtp');
+                        %display(obj.config.gtp_rules{rule_ind}{2}.data(1:10));
+                        display([ 'all the same ' num2str( sum_all_dims( before == obj.config.gtp_rules{rule_ind}{2}.data ) == numel(before) ) ' numel ' num2str(numel(before)) ' diff num ' num2str(sum_all_dims( before ~= obj.config.gtp_rules{rule_ind}{2}.data ) ) ]);
                     else
+                        % if rule_ind == 32
+                        %     dbstop TFDefaultEngine 75
+                        % end
+
                         obj.config.gtp_rules{rule_ind}{2}.data = eval( obj.config.gtp_rules{rule_ind}{3} );
                     end
                     execution_times(rule_ind) = execution_times(rule_ind) + toc(execution_tic);
-                end
+
+                    % if rule_ind == 8
+                    %     display('after rule');
+                    %     evalin('base', 'display(A.data(1:10))');
+                    % elseif rule_ind == 16
+                    %     display('after rule');
+                    %     evalin('base', 'display(B.data(1:10))');
+                    % elseif rule_ind == 24
+                    %     display('after rule');
+                    %     evalin('base', 'display(C.data(1:10))');
+                    % elseif rule_ind == 32
+                    %     display('after rule');
+                    %     evalin('base', 'display(G.data(1:10))');
+                    % end
+                end % end rule_ind
 
                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 

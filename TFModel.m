@@ -170,7 +170,7 @@ classdef TFModel < handle
                                         {obj.d2_Q_v(v), Z_alpha_bar_tensors{:}} };
 
                     if first_v
-                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-2 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
+                        gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
                         first_v = false;
                     else
                         gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.d2_alpha(' num2str(alpha) ').data + obj.config.tfmodel.phi_vector(' num2str(v) ')^-1 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
