@@ -15,6 +15,8 @@ classdef TFDefaultEngine < handle
         end
 
         function [] = factorize(obj)
+            % TODO: check expected data sizes before execution
+
             total_tic = tic;
             execution_times = zeros(length(obj.config.gtp_rules),1);
             for it_num = 1:obj.config.iteration_number
@@ -94,7 +96,8 @@ classdef TFDefaultEngine < handle
 
                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 
-                display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
+                %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
+                display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
 
             end % end iteration
             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
