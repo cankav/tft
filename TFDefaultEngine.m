@@ -21,7 +21,7 @@ classdef TFDefaultEngine < handle
             execution_times = zeros(length(obj.config.gtp_rules),1);
             for it_num = 1:obj.config.iteration_number
                 iteration_tic = tic;
-                display([ char(10) char(10) char(10) 'iteration ' num2str(it_num) ]);
+                %display([ char(10) char(10) char(10) 'iteration ' num2str(it_num) ]);
                 for rule_ind = 1:length(obj.config.gtp_rules)
                     % if rule_ind == 8
                     %     display('before rule');
@@ -46,7 +46,8 @@ classdef TFDefaultEngine < handle
                     % else
                     %     input = obj.config.gtp_rules{rule_ind}{3};
                     % end
-                    display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
+
+                    %display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
 
                     %for ri = 1:length(obj.config.gtp_rules)
                     %    display_rule( obj.config.gtp_rules{ri}, ri, 'ALL RULES ' );
@@ -55,7 +56,7 @@ classdef TFDefaultEngine < handle
                     execution_tic = tic;
                     if obj.config.gtp_rules{rule_ind}{1} == 'GTP'
                         %display('before gtp');
-                        before = obj.config.gtp_rules{rule_ind}{2}.data;
+                        % before = obj.config.gtp_rules{rule_ind}{2}.data;
                         %display(obj.config.gtp_rules{rule_ind}{2}.data(1:10));
                         assert( sum_all_dims(size(obj.config.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
                         input_tensors = obj.config.gtp_rules{rule_ind}{3};
@@ -69,7 +70,7 @@ classdef TFDefaultEngine < handle
 
                         %display('after gtp');
                         %display(obj.config.gtp_rules{rule_ind}{2}.data(1:10));
-                        display([ 'all the same ' num2str( sum_all_dims( before == obj.config.gtp_rules{rule_ind}{2}.data ) == numel(before) ) ' numel ' num2str(numel(before)) ' diff num ' num2str(sum_all_dims( before ~= obj.config.gtp_rules{rule_ind}{2}.data ) ) ]);
+                        %display([ 'all the same ' num2str( sum_all_dims( before == obj.config.gtp_rules{rule_ind}{2}.data ) == numel(before) ) ' numel ' num2str(numel(before)) ' diff num ' num2str(sum_all_dims( before ~= obj.config.gtp_rules{rule_ind}{2}.data ) ) ]);
                     else
                         % if rule_ind == 32
                         %     dbstop TFDefaultEngine 75
@@ -96,8 +97,7 @@ classdef TFDefaultEngine < handle
 
                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 
-                %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
-                display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
+                %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
 
             end % end iteration
             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );

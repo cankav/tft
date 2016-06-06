@@ -183,8 +183,8 @@ classdef TFSteinerEngine < handle
 
             node_offset = 0;
             if obj.draw_dot
-                dot_filename = [obj.base_filename '_' num2str(gtp_group_id) '.dot'];
-                svg_filename = [obj.base_filename '_' num2str(gtp_group_id) '.svg'];
+                dot_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.dot'];
+                svg_filename = ['dot_files/' obj.base_filename '_' num2str(gtp_group_id) '.svg'];
                 dot_text = containers.Map();
                 dot_text( 'digraph {' ) = 1;
             end
@@ -606,7 +606,8 @@ classdef TFSteinerEngine < handle
                      system(cmd);
                  end
 
-                 system(['if [ -f ' svg_filename ' ]; then rm ' svg_filename '; fi; cd dot_files && dot -Tsvg ' dot_filename ' > ' svg_filename ' ; #display ' svg_filename ]);
+                 cmd = ['if [ -f ' svg_filename ' ]; then rm ' svg_filename '; fi; cd dot_files && dot -Tsvg ' obj.base_filename '_' num2str(gtp_group_id) '.dot > ' obj.base_filename '_' num2str(gtp_group_id) '.svg ; #display ' svg_filename ];
+                 system(cmd);
              end
 
          end
@@ -614,29 +615,30 @@ classdef TFSteinerEngine < handle
          function [] = factorize(obj)
              % calculate optimal path in steiner tree for each group
 
+             get_optimal_operations_tic = tic;
              optimal_gtp_operations = [];
              for gg_ind = 1:length(obj.gtp_group_ids)
                  ops = obj.get_optimal_operations(obj.gtp_group_ids(gg_ind));
                  optimal_gtp_operations = [optimal_gtp_operations ops];
-                 display([char(10) 'optimal operations for gtp group id ' gg_ind]);
-                 for i = 1:length(ops)
-                     display_steiner_tree_operation( ops(i) );
-                 end
+                 %display([char(10) 'optimal operations for gtp group id ' num2str(gg_ind)]);
+                 %for i = 1:length(ops)
+                 %    display_steiner_tree_operation( ops(i) );
+                 %end
              end
-
+             display( ['get_optimal_operations took ' num2str(toc(get_optimal_operations_tic)) ' seconds '] );
 
              total_tic = tic;
              execution_times = zeros(length(obj.config.gtp_rules),1);
              for it_num = 1:obj.config.iteration_number
                  iteration_tic = tic;
-                 display([ char(10) 'iteration ' num2str(it_num) ]);
+                 %display([ char(10) 'iteration ' num2str(it_num) ]);
                  for rule_ind = 1:length(obj.config.gtp_rules)
                      % if iscell( obj.config.gtp_rules{rule_ind}{3} )
                      %     input = num2str(cellfun( @(x) x.id, obj.config.gtp_rules{rule_ind}{3} ));
                      % else
                      %     input = obj.config.gtp_rules{rule_ind}{3};
                      % end
-                     display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
+                     %display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
 
                      execution_tic = tic;
                      if obj.config.gtp_rules{rule_ind}{1} == 'GTP'
@@ -679,9 +681,10 @@ classdef TFSteinerEngine < handle
 
                  obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 
-                 display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' regexprep(num2str( obj.kl_divergence( :, it_num ) ), '\s*', ',') ] );
+                 %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
+
              end % end iteration
-             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
+             display( ['operation time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
          end
     end
 end

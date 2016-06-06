@@ -550,8 +550,8 @@ void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_ind
   //   std::cout << " " << output_data[i];
   // }
   // std::cout << std::endl;
-  std::cout << "print_meta_data" << std::endl;
-  print_meta_data(target_indices_full_cardinality, target_indices_full_strides, target_data_numel);
+  // std::cout << "print_meta_data" << std::endl;
+  // print_meta_data(target_indices_full_cardinality, target_indices_full_strides, target_data_numel);
   // std::cout << "output print_all_values" << std::endl;
   // print_all_values(output_data, mxIsSparse(output_data_mx), target_indices_full_cardinality, target_data_numel, target_indices_full_strides );
 }
@@ -663,11 +663,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
   }
 
-  std::cout << "contraction_index_inds:";
-  for ( size_t tft_indices_ind=0; tft_indices_ind<contraction_index_inds_length; tft_indices_ind++ ){
-    std::cout << " " << contraction_index_inds[tft_indices_ind];
-  }
-  std::cout << std::endl;
+  // std::cout << "contraction_index_inds:";
+  // for ( size_t tft_indices_ind=0; tft_indices_ind<contraction_index_inds_length; tft_indices_ind++ ){
+  //   std::cout << " " << contraction_index_inds[tft_indices_ind];
+  // }
+  // std::cout << std::endl;
   //std::cout << "osman4.1" << std::endl;
   pthread_t threads[num_threads];
   int rc;
@@ -695,11 +695,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   //std::cout << "osman6" << std::endl;
   mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
 
-  std::cout << "created calculated output elements:";
-  for ( int i=0; i<10; i++){
-    std::cout << " " << output_data[i];
-  }
-  std::cout << std::endl;
+  // std::cout << "created calculated output elements:";
+  // for ( int i=0; i<10; i++){
+  //   std::cout << " " << output_data[i];
+  // }
+  // std::cout << std::endl;
 
   //mexAtExit(clear_mem);
 }
