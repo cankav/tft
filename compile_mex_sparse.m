@@ -3,16 +3,16 @@ tft_clear();
 rand('seed',0);
 
 %% initialize test model data
-movie_index = Index(7);
-user_index = Index(4);
-topic_index = Index(10);
+movie_index = Index(17770);
+user_index = Index(480189);
+topic_index = Index(5);
 
 X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
 Z2 = Tensor( topic_index, user_index );
 
 % initialize with random data, 1% sparsity
-sparsity = 0.5;
+sparsity = 0.01;
 Z1.data = sparse( rand(topic_index.cardinality, movie_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, movie_index.cardinality);
 Z2.data = sparse( rand(topic_index.cardinality, user_index.cardinality) > (1-sparsity) ) .* rand(topic_index.cardinality, user_index.cardinality);
 

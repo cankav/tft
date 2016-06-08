@@ -20,6 +20,7 @@ function [] = test_gctf_helper(test_model_type)
         evalin('base', ['engine = TFDefaultEngine(config, ''' test_gtp_modes{i} ''');']);
         evalin('base', 'engine.factorize();');
         evalin('base', 'plot(engine.kl_divergence'');');
+        evalin('base', 'check_divergence(engine.kl_divergence);');
         pause(3);
     end
 
