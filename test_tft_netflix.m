@@ -20,5 +20,5 @@ pre_process();
 
 %% gtp_mex sparse trial
 gtp_mex_time = tic;
-gtp_mex(1, X, Z1, Z2);
+gtp_mex(16, X, Z1, Z2);
 display( [ 'gtp_mex sparse trial time: ' num2str(toc(gtp_mex_time)) ] );
