@@ -7,6 +7,7 @@
 #include <math.h>
 #include <algorithm> // for std::binary_search
 #include <stdexcept>
+//#include <assert.h>
 
 int num_threads;
 
@@ -17,11 +18,11 @@ mxArray* tft_indices_mx;
 
 double* output_data;
 mxArray* output_data_mx;
-// mwIndex* output_irs;
+mwIndex* output_irs;
 // size_t output_irs_index;
-// mwIndex* output_jcs;
+mwIndex* output_jcs;
 size_t output_data_maximum_numel;
-size_t output_data_numel_nzmax;
+mwSize output_data_numel_nzmax;
 size_t* output_index_cardinalities;
 size_t* output_indices_full_cardinality;
 size_t* output_indices_full_strides;
@@ -44,12 +45,12 @@ size_t contraction_index_inds_length;
 // TODO comment this mutex code, no need to depend on c++-11 for proper printing
 std::mutex print_lock;
 
-bool is_sparse;
+bool is_sparse_output;
 bool* is_sparse_input;
 size_t input_length;
 
-const size_t INITIAL_SPARSE_NZMAX = 100000; // TODO: increase this number after testing
-const float GROW_FACTOR = 1.5;
+//const size_t INITIAL_SPARSE_NZMAX = 100000; // TODO: increase this number after testing
+//const float GROW_FACTOR = 1.5;
 
 //size_t compute_output_tensor_part_helper_call_count = 0;
 
@@ -121,7 +122,7 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
       cache_bitmap->at(tensor_numel_index) = true;
       //print_lock.lock(); std::cout << "osman309" << std::endl; print_lock.unlock();
       cache_lock->unlock();
-      //std::cout << "store1 complete" << std::endl;
+      //std::cout << "value not present tensor_numel_index " << tensor_numel_index << std::endl;
       return 0;
     }else{
       //std::cout << "store2 " << output_numel_index << " " << tensor_data[result - target_irs] << std::endl;
@@ -139,58 +140,71 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
   }
 }
 
-void compute_output_tensor_part_helper(size_t* output_full_index_configuration, size_t output_numel_index, size_t increment_index_ind=0){
-  //print_lock.lock(); //std::cout << "osman200" << std::endl; print_lock.unlock();
+void compute_output_tensor_part_helper(size_t* output_full_index_configuration, size_t output_data_index, size_t increment_index_ind=0){
+  //print_lock.lock(); std::cout << "osman200" << std::endl; print_lock.unlock();
   for ( size_t contraction_index_value=0;
 	contraction_index_value<tft_indices_cardinalities[contraction_index_inds[increment_index_ind]];
 	contraction_index_value++ ){
-    //print_lock.lock(); //std::cout << "osman201" << std::endl; print_lock.unlock();
+    //print_lock.lock(); std::cout << "osman201" << std::endl; print_lock.unlock();
 
     //std::cout << "compute_output_tensor_part_helper: output_full_index_configuration[ contraction_index_inds[" << increment_index_ind << "] -> " << contraction_index_inds[increment_index_ind]  << " ] = " << contraction_index_value << std::endl;
     output_full_index_configuration[ contraction_index_inds[increment_index_ind] ] = contraction_index_value;
-    //print_lock.lock(); //std::cout << "osman203" << std::endl; print_lock.unlock();
+    //print_lock.lock(); std::cout << "osman203" << std::endl; print_lock.unlock();
     if ( increment_index_ind == (contraction_index_inds_length-1) ){
-      if ( is_sparse == true ){
-	//print_lock.lock(); //std::cout << "osman204" << std::endl; print_lock.unlock();
-	// TODO: input tensors may or may not be sparse!
-	// output_data[output_irs_index] += ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs, input0_cache, input0_cache_bitmap, &input0_cache_lock) *
-	// 				   get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs, input1_cache, input1_cache_bitmap, &input1_cache_lock) );
-	double product = get_tensor_data_by_full_index_configuration_sparse(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0], input_irs[0], input_jcs[0], input_cache[0], input_cache_bitmap[0], &(input_cache_lock[0]));
-	//print_lock.lock(); //std::cout << "osman204.1" << std::endl; print_lock.unlock();
-	for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
-	  //print_lock.lock(); //std::cout << "osman204.2" << std::endl; print_lock.unlock();
-	  product *= get_tensor_data_by_full_index_configuration_sparse(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind], input_irs[input_ind], input_jcs[input_ind], input_cache[input_ind], input_cache_bitmap[input_ind], &(input_cache_lock[input_ind]));
-	}
-	//print_lock.lock(); //std::cout << "osman204.3" << std::endl; print_lock.unlock();
-	output_data[output_numel_index] += product;
-	//print_lock.lock(); //std::cout << "osman205" << std::endl; print_lock.unlock();
+      //print_lock.lock(); std::cout << "osman204" << std::endl; print_lock.unlock();
+      // output_data[output_irs_index] += ( get_tensor_data_by_full_index_configuration_sparse(input0_data, output_full_index_configuration, input0_indices_full_strides, input0_data_numel, input0_irs, input0_jcs, input0_cache, input0_cache_bitmap, &input0_cache_lock) *
+      // 				   get_tensor_data_by_full_index_configuration_sparse(input1_data, output_full_index_configuration, input1_indices_full_strides, input1_data_numel, input1_irs, input1_jcs, input1_cache, input1_cache_bitmap, &input1_cache_lock) );
+
+      double product;
+      if ( is_sparse_input[0] == true ){
+	product = get_tensor_data_by_full_index_configuration_sparse(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0], input_irs[0], input_jcs[0], input_cache[0], input_cache_bitmap[0], &(input_cache_lock[0]));
+	//print_lock.lock(); std::cout << "osman204.1 product " << product << std::endl; print_lock.unlock();	
       }else{
-	//print_lock.lock(); //std::cout << "osman206" << std::endl; print_lock.unlock();
-	double product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
-	// std::cout << "output_full_index_configuration(0):";
-	// for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
-	//   std::cout << " " << output_full_index_configuration[tft_indices_ind];
-	// }
-	// std::cout << " input_values: " << product;
-	for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
-	  //std::cout << " " << get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
+	product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
+	//print_lock.lock(); std::cout << "osman204.2 product " << product << std::endl; print_lock.unlock();	
+      }
+      //print_lock.lock(); std::cout << "osman204.3" << std::endl; print_lock.unlock();
+      for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
+	//print_lock.lock(); std::cout << "osman204.4" << std::endl; print_lock.unlock();
+	if ( is_sparse_input[input_ind] == true ){
+	  product *= get_tensor_data_by_full_index_configuration_sparse(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind], input_irs[input_ind], input_jcs[input_ind], input_cache[input_ind], input_cache_bitmap[input_ind], &(input_cache_lock[input_ind]));
+	  //print_lock.lock(); std::cout << "osman205.3 product " << product <<  std::endl; print_lock.unlock();
+	}else{
 	  product *= get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
+	  //print_lock.lock(); std::cout << "osman206.3 product " << product << std::endl; print_lock.unlock();
 	}
-	//std::cout << " prev " << output_data[output_numel_index] << " increment " << product << std::endl;
-	output_data[output_numel_index] += product;
+
+	//print_lock.lock(); std::cout << "osman205" << std::endl; print_lock.unlock();
+      }
+      //print_lock.lock(); std::cout << "output_data_index " << output_data_index << " prev " << output_data[output_data_index] << " increment " << product << std::endl; print_lock.unlock();
+      output_data[output_data_index] += product;
+      //else{
+	// //print_lock.lock(); //std::cout << "osman206" << std::endl; print_lock.unlock();
+	// double product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
+	// // std::cout << "output_full_index_configuration(0):";
+	// // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
+	// //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
+	// // }
+	// // std::cout << " input_values: " << product;
+	// for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
+	//   //std::cout << " " << get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
+	//   product *= get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
+	// }
+	// //std::cout << " prev " << output_data[output_numel_index] << " increment " << product << std::endl;
+	// output_data[output_numel_index] += product;
 
 	//print_lock.lock(); //std::cout << "osman207" << std::endl; print_lock.unlock();
-      }
+	//}
       // print_lock.lock();
       // std::cout << output_numel_index << " ";
       // print_lock.unlock();
       
     }else{
-      //print_lock.lock(); //std::cout << "osman208" << std::endl; print_lock.unlock();
-      compute_output_tensor_part_helper( output_full_index_configuration, output_numel_index, increment_index_ind+1 );
+      //print_lock.lock(); std::cout << "osman208" << std::endl; print_lock.unlock();
+      compute_output_tensor_part_helper( output_full_index_configuration, output_data_index, increment_index_ind+1 );
     }
   }
-  //print_lock.lock(); //std::cout << "osman209" << std::endl; print_lock.unlock();
+  //print_lock.lock(); std::cout << "osman209" << std::endl; print_lock.unlock();
 }
 void print_all_values(double* data, bool is_tensor_sparse, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, std::vector<size_t> index_configuration=std::vector<size_t>(), size_t iter_index=0, mwIndex* target_irs=NULL, mwIndex* target_jcs=NULL, double* target_cache=NULL, std::vector<bool>* target_cache_bitmap=NULL, std::mutex* target_cache_lock=NULL){
   if (is_tensor_sparse && target_irs==NULL){
@@ -243,16 +257,16 @@ std::pair <size_t,size_t> get_thr_output_data_start_end(int tid){
 }
 
 void* compute_output_tensor_part(void *args){
-  //print_lock.lock(); //std::cout << "osman100" << std::endl; print_lock.unlock();
+  //print_lock.lock(); std::cout << "osman100" << std::endl; print_lock.unlock();
 
   int tid = (intptr_t) args;
 
   std::pair <size_t,size_t> start_end = get_thr_output_data_start_end(tid);
 
   size_t* output_full_index_configuration = (size_t*) calloc( tft_indices_length, sizeof(size_t) );
-  // print_lock.lock();
-  // std::cout << "tft_indices_length " << tft_indices_length << std::endl;
-  // std::cout << "output_full_index_configuration(0):";
+  //print_lock.lock();
+  //std::cout << "tft_indices_length " << tft_indices_length << std::endl;
+  //std::cout << "output_full_index_configuration(0):";
   // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
   //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
   // }
@@ -260,8 +274,19 @@ void* compute_output_tensor_part(void *args){
 
   //int loop_count = 0;
   //std::cout << "osman101" << std::endl;
-  for ( size_t output_numel_ind=start_end.first; output_numel_ind<start_end.second; output_numel_ind++ ){
-    //print_lock.lock(); //std::cout << "osman101" << std::endl; print_lock.unlock();
+  for ( size_t output_data_ind=start_end.first; output_data_ind<start_end.second; output_data_ind++ ){
+
+    size_t output_numel_ind; // sparse: irs index, dense: numel index
+    // output_data_ind -> sparse: data index, dense: not used
+
+    if ( is_sparse_output ){
+      //print_lock.lock(); std::cout << "\n\nosman101.0 output_data_ind " << output_data_ind << " " << output_irs[output_data_ind] <<  std::endl; print_lock.unlock();  
+      output_numel_ind = output_irs[output_data_ind]; // decodes csc encoded index to full index
+    }else{
+      output_numel_ind = output_data_ind;
+    }
+
+    //print_lock.lock(); std::cout << "osman101.1 output_numel_ind " << output_numel_ind << std::endl; print_lock.unlock();
 
     // calculate output_full_index_configuration for output_numel_ind
     // for s_1 = 2, s_2 = 3, s_3 = 4
@@ -272,10 +297,10 @@ void* compute_output_tensor_part(void *args){
     size_t left_hand_inds_step_divider = 1;
     size_t output_numel_index = 0;
     // print_lock.lock();
-    // std::cout << "\n\noutput_numel_ind " << output_numel_ind << std::endl;
+    //std::cout << "output_numel_ind " << output_numel_ind << std::endl;
     for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
       if ( output_indices_full_strides[tft_indices_ind] > 0 ){
-	// std::cout << "tft_indices_ind " << tft_indices_ind << " available" << std::endl;
+	//std::cout << "tft_indices_ind " << tft_indices_ind << " available" << std::endl;
 
 	output_full_index_configuration[tft_indices_ind] = ((size_t)floor(output_numel_ind / left_hand_inds_step_divider)) % tft_indices_cardinalities[tft_indices_ind];
 	//right_hand_inds_step_divider *= tft_indices_cardinalities[tft_indices_ind];
@@ -292,9 +317,18 @@ void* compute_output_tensor_part(void *args){
       // std::cout << std::endl;
 
     }
+
+    if (output_numel_ind != output_numel_index){
+      mexErrMsgTxt('Error output_numel_ind must be equal to output_numel_index');
+    }
+
+    // print_lock.lock();
+    // std::cout << "output_numel_ind " << output_numel_ind << " output_numel_index " << output_numel_index << std::endl;
+    // print_lock.unlock();
+
     //print_lock.unlock();
     
-    //print_lock.lock(); //std::cout << "osman102" << std::endl; print_lock.unlock();
+    //print_lock.lock(); std::cout << "osman102" << std::endl; print_lock.unlock();
     // print_lock.lock(); std::cout << "output_full_index_configuration(1):";
     // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
     //   std::cout << " " << output_full_index_configuration[tft_indices_ind];
@@ -304,39 +338,42 @@ void* compute_output_tensor_part(void *args){
     if ( contraction_index_inds_length == 0 ){
       // no contraction, just multiply and store result
       // TODO: TEST, not tested with matrix product test
-      if ( is_sparse == true ){
-	//output_irs[output_numel_index] = output_numel_index;
-	// TODO: input tensors may or may not be sparse!
-	double product = get_tensor_data_by_full_index_configuration_sparse(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0], input_irs[0], input_jcs[0], input_cache[0], input_cache_bitmap[0], &(input_cache_lock[0]));
-	for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
-	  product *= get_tensor_data_by_full_index_configuration_sparse(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind], input_irs[input_ind], input_jcs[input_ind], input_cache[input_ind], input_cache_bitmap[input_ind], &(input_cache_lock[input_ind]));
-	}
-	output_data[output_numel_index] = product;
-
+      //if ( is_sparse == true ){
+      //output_irs[output_numel_index] = output_numel_index;
+      // TODO: input tensors may or may not be sparse!
+      double product;
+      if ( is_sparse_input[0] ){
+	product = get_tensor_data_by_full_index_configuration_sparse(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0], input_irs[0], input_jcs[0], input_cache[0], input_cache_bitmap[0], &(input_cache_lock[0]));
       }else{
-	double product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
-	for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
+	product = get_tensor_data_by_full_index_configuration_dense(input_data[0], output_full_index_configuration, input_indices_full_strides[0], input_data_numel[0]);
+      }
+      for ( size_t input_ind=1; input_ind<input_length; input_ind++ ){
+	if ( is_sparse_input[input_ind] ){
+	  product *= get_tensor_data_by_full_index_configuration_sparse(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind], input_irs[input_ind], input_jcs[input_ind], input_cache[input_ind], input_cache_bitmap[input_ind], &(input_cache_lock[input_ind]));
+	}else{
 	  product *= get_tensor_data_by_full_index_configuration_dense(input_data[input_ind], output_full_index_configuration, input_indices_full_strides[input_ind], input_data_numel[input_ind]);
 	}
-	output_data[output_numel_index] = product;
       }
+      output_data[output_data_ind] = product;
       
     }else{
       // loop for each combination of contraction indexes' values and store result
-      if ( is_sparse == true ){
+      if ( is_sparse_output == true ){
 	//output_data[output_irs_index] = 0;
-	output_data[output_numel_index] = 0;
+	output_data[output_data_ind] = 0;
       }else{
-	output_data[output_numel_index] = 0;
+	output_data[output_data_ind] = 0;
       }
 
-      // print_lock.lock(); std::cout << "\n\noutput_full_index_configuration(2):";
+      // print_lock.lock(); std::cout << "output_full_index_configuration(2):";
       // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
       // 	std::cout << " " << output_full_index_configuration[tft_indices_ind];
       // }
       // std::cout << std::endl; print_lock.unlock();
 
-      compute_output_tensor_part_helper(output_full_index_configuration, output_numel_index);
+
+      
+      compute_output_tensor_part_helper(output_full_index_configuration, output_data_ind);
 
       // print_lock.lock(); std::cout << "output_full_index_configuration(3):";
       // for( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
@@ -475,8 +512,11 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
   // }
   // mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
   mwSize* output_data_array_cardinalities = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
+  output_indices_full_cardinality = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
+  output_indices_full_strides = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
 
   size_t output_data_array_cardinalities_index = 0;
+  size_t current_stride = 1;
   for ( size_t tft_indices_ind=0; tft_indices_ind<tft_indices_length; tft_indices_ind++ ){
     bool found = false;
     for ( size_t output_indices_ind=0; output_indices_ind<output_indices_length; output_indices_ind++ ){
@@ -485,7 +525,12 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
       if ( tft_indices_ids[tft_indices_ind] == output_index_id ){
 	//std::cout << "init_output_tensor_meta_data0 : " << output_data_array_cardinalities_index << " " << tft_indices_cardinalities[tft_indices_ind] << std::endl;
 	output_data_array_cardinalities[output_data_array_cardinalities_index] = tft_indices_cardinalities[tft_indices_ind];
+
+	output_indices_full_cardinality[output_data_array_cardinalities_index] = tft_indices_cardinalities[tft_indices_ind];
+	output_indices_full_strides[output_data_array_cardinalities_index] = current_stride;
+	current_stride *= tft_indices_cardinalities[tft_indices_ind];
 	output_data_array_cardinalities_index++;
+
 	found = true;
 	break;
       }
@@ -494,31 +539,42 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
       // dummy dimension (due to Matlab indexing compatability)
       //std::cout << "init_output_tensor_meta_data0 : " << output_data_array_cardinalities_index << " " << 1 << std::endl;
       output_data_array_cardinalities[output_data_array_cardinalities_index] = 1;
+
+      output_indices_full_cardinality[output_data_array_cardinalities_index] = 0; // TODO: rename output_data_array_cardinalities_index -> tft_indices_ind
+      output_indices_full_strides[output_data_array_cardinalities_index] = 0;
+
       output_data_array_cardinalities_index++;
       //std::cout << "init_output_tensor_meta_data1 : " << output_data_array_cardinalities_index << " " << output_data_array_cardinalities[output_data_array_cardinalities_index] << std::endl;
     }
   }
 
-  // std::cout << "init_output_tensor_meta_data" << std::endl;
+  // std::cout << "init_output_tensor_meta_data: output_indices_full_strides" << std::endl;
   // for ( int i=0; i<tft_indices_length; i++){
-  //   std::cout << std::dec << output_data_array_cardinalities[i] << std::endl;
+  //   std::cout << std::dec << output_indices_full_strides[i] << std::endl;
   // }
 
   return output_data_array_cardinalities;
 }
 
-// void init_sparse_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
-//   init_output_tensor_meta_data(target_mxArray);
-//   init_tensor_meta_data( target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
-//   output_data_numel_nzmax = INITIAL_SPARSE_NZMAX;
-//   output_data_mx = mxCreateSparse(INITIAL_SPARSE_NZMAX, 1, output_data_numel_nzmax, mxREAL);
-//   output_data = (double*) mxGetData(output_data_mx);
+void init_sparse_output_tensor(const mxArray* target_mxArray){ //, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t* target_indices_full_strides ){
+  //std::cout << "init_sparse_output_tensor start" << std::endl;
+  //output_irs_index = 0;
+  if( mxIsSparse( output_data_mx ) == false ){
+    mexErrMsgTxt("init_sparse_output_tensor must not be called with dense data");
+  }
 
-//   output_irs = mxGetIr( output_data_mx );
-//   output_irs_index = 0;
-//   output_jcs = mxGetJc( output_data_mx );
-//   output_jcs[0] = 0;
-// }
+  output_data_maximum_numel = mxGetNzmax(output_data_mx);
+  //std::cout << "init_sparse_output_tensor 1 output_data_maximum_numel " << output_data_maximum_numel << std::endl;
+  output_data = (double*) mxGetData(output_data_mx);
+  //std::cout << "init_sparse_output_tensor 2 " << output_data_mx << std::endl;
+  output_irs = mxGetIr( output_data_mx );
+  //std::cout << "init_sparse_output_tensor 3" << std::endl;
+  output_jcs = mxGetJc( output_data_mx );
+  //std::cout << "init_sparse_output_tensor 4" << std::endl;
+  //output_jcs[0] = 0;
+  init_output_tensor_meta_data(target_mxArray);
+  //std::cout << "init_sparse_output_tensor end" << std::endl;
+}
 
 void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
   mwSize* output_data_array_cardinalities = init_output_tensor_meta_data(target_mxArray);
@@ -560,6 +616,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   if (nrhs < 4){
     mexErrMsgTxt("gtp_mex requires at least 4 arguments: num threads, output tensor, input_tensor_0, input_tensor1, ...");
   }
+  //std::cout << "osman0" << std::endl;
 
   // 0: degree of parallelism
   num_threads = (int) mxGetScalar(prhs[0]);
@@ -567,9 +624,38 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   const int output_tensor_prhs_index = 1;
   // 2...n: input tensors
 
+  //  std::cout << "osman0.1" << std::endl;
+  // initialize tft_indices
+  tft_indices_mx = mexGetVariable("global", "tft_indices");
+  tft_indices_length = mxGetNumberOfElements(tft_indices_mx);
+  tft_indices_cardinalities = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
+  tft_indices_ids = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
+  for (int i=0; i<tft_indices_length; i++){
+    tft_indices_cardinalities[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
+    tft_indices_ids[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "id")))))[0]);
+  }
+
+  //std::cout << "osman0.2" << std::endl;
+  // initialize output
+  output_data_mx = mxGetProperty( prhs[ output_tensor_prhs_index ], 0, "data" );
+  if ( output_data_mx == NULL ){
+    is_sparse_output = false;
+  }else{
+    is_sparse_output = mxIsSparse( output_data_mx );
+  }
+
+  //std::cout << "is_sparse_output " << is_sparse_output << std::endl;
+  if ( is_sparse_output ){
+    init_sparse_output_tensor(prhs[output_tensor_prhs_index]); //, &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
+  }else{
+    init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
+
+    //TODO: remove output init from dense gtp_mex tests
+  }
+
+  // initialize input
   input_length = nrhs-output_tensor_prhs_index-1;
   //std::cout << "input_length " << input_length << std::endl;
-
   is_sparse_input = (bool*) malloc( sizeof(bool) * input_length );
   input_data = (double**) malloc( sizeof(double*) * input_length );
   input_irs = (mwIndex**) malloc( sizeof(mwIndex*) * input_length );
@@ -581,65 +667,45 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   input_cache_bitmap = (std::vector<bool>**) malloc( sizeof(std::vector<bool>*) * input_length );
   input_cache_lock = new std::mutex[input_length];
 
-  //std::cout << "osman1" << std::endl;
-  tft_indices_mx = mexGetVariable("global", "tft_indices");
-  tft_indices_length = mxGetNumberOfElements(tft_indices_mx);
-  tft_indices_cardinalities = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
-  tft_indices_ids = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
-  for (int i=0; i<tft_indices_length; i++){
-    tft_indices_cardinalities[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
-    tft_indices_ids[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "id")))))[0]);
-  }
   //std::cout << "osman2" << std::endl;
 
-  is_sparse = false;
+  //is_sparse = false; //TODO: remove is_sparse variable
   for (int prhs_offset=1; prhs_offset<=input_length; prhs_offset++){
     size_t prhs_index = output_tensor_prhs_index+prhs_offset;
     bool is_tensor_sparse = mxIsSparse( mxGetProperty( prhs[prhs_index], 0, "data" ) );
-    is_sparse = is_sparse || is_tensor_sparse;
+    //is_sparse = is_sparse || is_tensor_sparse;
     is_sparse_input[prhs_offset-1] = is_tensor_sparse;
     //std::cout << "is_sparse_input[" << prhs_offset-1 << "] = " << is_sparse_input[prhs_offset-1] << std::endl;
   }
 
   //std::cout << "osman3" << std::endl;
-  init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
+  //init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
   //std::cout << "osman3.0" << std::endl;
   //std::cout << "init_tensor_meta_data output_data_maximum_numel " << output_data_maximum_numel << std::endl;
-  if ( is_sparse == true ){
-    // sparse init
 
-    //init_sparse_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
-    for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
-      if ( is_sparse_input[input_ind] == true ){
-	//std::cout << "osman3.10" << std::endl;
-	init_sparse_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ], &(input_irs[input_ind]), &(input_jcs[input_ind]), &(input_cache[input_ind]), &(input_cache_bitmap[input_ind]), &(input_cache_lock[input_ind]));
-	//std::cout << "osman3.11" << std::endl;
-      }else {
-	//std::cout << "osman3.12 prhs_index " << output_tensor_prhs_index << " " << input_ind << " " << 1 << " total " << output_tensor_prhs_index+input_ind+1 << std::endl;
-	init_dense_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ]);
-	//std::cout << "osman3.13" << std::endl;
-      }
-    }
 
-    //std::cout << "osman3.14" << std::endl;
-    // initialize input caches
-    for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
-      //std::cout << "osman3.14.1" << std::endl;
-      input_cache[input_ind] = (double*) malloc( sizeof(double) * (input_data_numel[input_ind]) );
-      //std::cout << "osman3.14.2" << std::endl;
-      input_cache_bitmap[input_ind] = new std::vector<bool>(input_data_numel[input_ind]);
-      //std::cout << "osman3.14.3" << std::endl;
-    }
-    //std::cout << "osman3.15" << std::endl;
-  }else{
-    // dense init
-    //init_dense_output_tensor(prhs[output_tensor_prhs_index], &output_indices_full_cardinality, &output_data_maximum_numel, &output_indices_full_strides);
-    for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
-      //std::cout << "osman3.1" << std::endl;
+  for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
+    if ( is_sparse_input[input_ind] == true ){
+      //std::cout << "osman3.10" << std::endl;
+      init_sparse_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ], &(input_irs[input_ind]), &(input_jcs[input_ind]), &(input_cache[input_ind]), &(input_cache_bitmap[input_ind]), &(input_cache_lock[input_ind]));
+      //std::cout << "osman3.11" << std::endl;
+    }else {
+      //std::cout << "osman3.12 prhs_index " << output_tensor_prhs_index << " " << input_ind << " " << 1 << " total " << output_tensor_prhs_index+input_ind+1 << std::endl;
       init_dense_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ]);
-      //std::cout << "osman3.2" << std::endl;
+      //std::cout << "osman3.13" << std::endl;
     }
   }
+
+  //std::cout << "osman3.14" << std::endl;
+  // initialize input caches
+  for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
+    //std::cout << "osman3.14.1" << std::endl;
+    input_cache[input_ind] = (double*) malloc( sizeof(double) * (input_data_numel[input_ind]) );
+    //std::cout << "osman3.14.2" << std::endl;
+    input_cache_bitmap[input_ind] = new std::vector<bool>(input_data_numel[input_ind]);
+    //std::cout << "osman3.14.3" << std::endl;
+  }
+  //std::cout << "osman3.15" << std::endl;
 
   //std::cout << "osman4" << std::endl;
   // generate contraction_index_inds
@@ -693,6 +759,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   // }
 
   //std::cout << "osman6" << std::endl;
+
   mxSetProperty( prhs[ output_tensor_prhs_index ], 0, "data", output_data_mx );
 
   // std::cout << "created calculated output elements:";
