@@ -173,7 +173,7 @@ classdef TFSteinerEngine < handle
             state_labels = {};
             edge_labels = containers.Map();
             if isunix
-                available_memory = get_free_mem()*10; % MB % TODO: x10 virtual memory??
+                available_memory = get_total_mem() * 0.8; %get_free_mem()*10; % MB % TODO: x10 virtual memory??
                 available_memory = available_memory * 1e6; % bytes
             else
                 % TODO: test

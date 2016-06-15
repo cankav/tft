@@ -17,6 +17,8 @@ classdef TFDefaultEngine < handle
         function [] = factorize(obj)
             % TODO: check expected data sizes before execution
 
+            factorize_start_clock = clock;
+            factorize_timeout = false;
             total_tic = tic;
             execution_times = zeros(length(obj.config.gtp_rules),1);
             for it_num = 1:obj.config.iteration_number
@@ -93,7 +95,18 @@ classdef TFDefaultEngine < handle
                     %     display('after rule');
                     %     evalin('base', 'display(G.data(1:10))');
                     % end
+
+                    if obj.config.timeout ~= 0 && etime(clock, factorize_start_clock) > obj.config.timeout
+                        display(['Warning: Factorization timeout at iteration: ' num2str(it_num) ' rule_ind ' num2str(rule_ind)]);
+                        factorize_timeout = true;
+                        break
+                    end
+
                 end % end rule_ind
+
+                if factorize_timeout
+                    break
+                end
 
                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
 

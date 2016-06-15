@@ -3,6 +3,7 @@ classdef TFEngineConfig < handle
         gtp_rules;
         tfmodel;
         iteration_number;
+        timeout=0;
     end
 
     methods
