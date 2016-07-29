@@ -97,7 +97,7 @@ classdef TFModel < handle
             obj.X_hat_tensors = [];
             xhat_index = 1;
             for fm_ind = 1:2:length(obj.factorization_model)
-                obj.X_hat_tensors = [ obj.X_hat_tensors create_tensor( cellfun( @(index) index.id, obj.factorization_model{fm_ind}.indices ), 'random' ) ];
+                obj.X_hat_tensors = [ obj.X_hat_tensors create_tensor( cellfun( @(index) index.id, obj.factorization_model{fm_ind}.indices ), obj.factorization_model{fm_ind} ) ];
                 obj.X_hat_tensors(end).name = ['Xhat_' num2str(xhat_index)];
                 xhat_index = xhat_index + 1;
             end
@@ -119,11 +119,11 @@ classdef TFModel < handle
             obj.d1_Q_v = [];
             obj.d2_Q_v = [];
             for v = 1:length(obj.X_hat_tensors) %find( obj.coupling_matrix(:, obj.Z_alpha_tensor_ids(alpha)) )
-                X_indices = obj.X_hat_tensors(v).indices;
-                obj.d1_Q_v = [ obj.d1_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), 'zeros' ) ];
+                X_indices = obj.factorization_model{((v-1)*2)+1}.indices; %obj.X_hat_tensors(v).indices;
+                obj.d1_Q_v = [ obj.d1_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), obj.factorization_model{((v-1)*2)+1} ) ];
                 obj.d1_Q_v(end).name = ['d1_Q_v_' num2str(v)];
                 
-                obj.d2_Q_v = [ obj.d2_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), 'zeros' ) ];
+                obj.d2_Q_v = [ obj.d2_Q_v create_tensor( cellfun( @(index) index.id, X_indices ), obj.factorization_model{((v-1)*2)+1} ) ];
                 obj.d2_Q_v(end).name = ['d2_Q_v_' num2str(v)];
             end
 
@@ -142,7 +142,7 @@ classdef TFModel < handle
                     observed_tensor_fm_ind = v_index*2-1;
                     gtp_rules{end+1} = { '=',
                                         obj.d1_Q_v(v_index),
-                                        ['obj.config.tfmodel.factorization_model{' num2str(observed_tensor_fm_ind) '}.data .* arrayfun(@(x) x.^-' num2str(obj.p_vector(v_index)) ', obj.config.tfmodel.X_hat_tensors(' num2str(v_index) ').data);'] };
+                                        ['obj.config.tfmodel.factorization_model{' num2str(observed_tensor_fm_ind) '}.data .* spfun(@(x) x.^-' num2str(obj.p_vector(v_index)) ', obj.config.tfmodel.X_hat_tensors(' num2str(v_index) ').data);'] };
 
                     Z_alpha_inds = find(obj.coupling_matrix(v_index,:));
                     Z_alpha_bar_inds = Z_alpha_inds;
@@ -162,7 +162,7 @@ classdef TFModel < handle
 
                     gtp_rules{end+1} = { '=',
                                         obj.d2_Q_v(v_index),
-                                        ['arrayfun(@(x) x.^(1-' num2str(obj.p_vector(v_index)) '), obj.config.tfmodel.X_hat_tensors(' num2str(v_index) ').data);'] };
+                                        ['spfun(@(x) x.^(1-' num2str(obj.p_vector(v_index)) '), obj.config.tfmodel.X_hat_tensors(' num2str(v_index) ').data);'] };
 
                     Z_alpha_inds = find(obj.coupling_matrix(v_index,:));
                     Z_alpha_bar_inds = Z_alpha_inds;

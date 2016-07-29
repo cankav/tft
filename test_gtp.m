@@ -12,7 +12,7 @@ X = Tensor( movie_index, user_index );
 Z1 = Tensor( topic_index, movie_index);
 Z2 = Tensor( topic_index, user_index );
 
-% necessary for running pre_process multiple times in single environment
+% necessary for running pre_process multiple times in single environment %TODO: check this
 Z1_data_orig = rand( topic_index.cardinality, movie_index.cardinality );
 Z2_data_orig = rand( topic_index.cardinality, user_index.cardinality );
 Z1.data = Z1_data_orig;

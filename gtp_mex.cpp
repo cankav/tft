@@ -105,6 +105,12 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
 
   //print_lock.lock(); std::cout << "osman303" << std::endl; print_lock.unlock();
   // query cache first
+
+
+address cache via sparse index
+
+
+  
   if ( cache_bitmap->at(tensor_numel_index) == true ){
     //print_lock.lock(); std::cout << "osman304" << std::endl; print_lock.unlock();
     return cache[tensor_numel_index];

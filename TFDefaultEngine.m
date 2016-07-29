@@ -39,9 +39,9 @@ classdef TFDefaultEngine < handle
                     %     evalin('base', 'display(G.data(1:10))');
                     % end
                                         
-                    % if rule_ind == 10 || rule_ind == 18 || rule_ind == 26
-                    %     dbstop TFDefaultEngine 25
-                    % end
+                    if rule_ind == 3 % || rule_ind == 18 || rule_ind == 26
+                        dbstop TFDefaultEngine 58
+                    end
 
                     % if iscell( obj.config.gtp_rules{rule_ind}{3} )
                     %     input = num2str(cellfun( @(x) x.id, obj.config.gtp_rules{rule_ind}{3} ));
@@ -49,7 +49,7 @@ classdef TFDefaultEngine < handle
                     %     input = obj.config.gtp_rules{rule_ind}{3};
                     % end
 
-                    %display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
+                    display_rule( obj.config.gtp_rules{rule_ind}, rule_ind, 'Executing ' );
 
                     %for ri = 1:length(obj.config.gtp_rules)
                     %    display_rule( obj.config.gtp_rules{ri}, ri, 'ALL RULES ' );
@@ -63,7 +63,7 @@ classdef TFDefaultEngine < handle
                         assert( sum_all_dims(size(obj.config.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
                         input_tensors = obj.config.gtp_rules{rule_ind}{3};
                         if strcmp(obj.gtp_implementation_selection, 'gtp_mex')
-                            gtp_mex(16, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
+                            gtp_mex(1, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp')
                             gtp(obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp_full')

@@ -18,7 +18,8 @@ function [] = pre_process()
             end
         end
         % order tft_indices by Index.id fields
-        tft_indices = tft_indices( [tft_indices.id] );
+        [x,y] = sort( [tft_indices.id] );
+        tft_indices = tft_indices( y );
             
         %display( [ 'pre_process: generated tft_indices of length ' num2str( length(tft_indices) ) ] );
 
@@ -50,13 +51,17 @@ function [] = pre_process()
                         dim2_index_order = evalin('base', [ 'find( [' num2str(1:length(tft_indices)) '] == ' vars(var_ind).name '.indices{2}.id );']);
                         if dim1_index_order > dim2_index_order
                             evalin('base', [ vars(var_ind).name '.data =  reshape( transpose(' vars(var_ind).name '.data), [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                            evalin('base', [vars(var_ind).name '.original_indices_permute_array = [2 1];']);
                         else
                             evalin('base', [ vars(var_ind).name '.data =  reshape( ' vars(var_ind).name '.data, [ prod(size(' vars(var_ind).name '.data)), 1 ] );']);
+                            evalin('base', [vars(var_ind).name '.original_indices_permute_array = [1 2];']);
                         end
 
-                        cmd = [vars(var_ind).name '.reshaped = 1;'];
+                        % truncate extra size due to reshape
+                        %[x_ind, y_ind] = evalin('base', ['find(' vars(var_ind).name '.data)']);
+                        %evalin('base', [vars(var_ind).name '.data(' num2str(max(x_ind)+1) ':end)=[]']);
 
-                        % TODO: calculate original_indices_permute_array
+                        cmd = [vars(var_ind).name '.reshaped = 1;'];
 
                         evalin('base', cmd)
                     end
