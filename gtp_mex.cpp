@@ -107,11 +107,7 @@ double get_tensor_data_by_full_index_configuration_sparse(double* tensor_data, s
   // query cache first
 
 
-address cache via sparse index
-
-
-  
-  if ( cache_bitmap->at(tensor_numel_index) == true ){
+  if ( cache_bitmap != NULL && cache_bitmap->at(tensor_numel_index) == true ){
     //print_lock.lock(); std::cout << "osman304" << std::endl; print_lock.unlock();
     return cache[tensor_numel_index];
   }else{
@@ -121,26 +117,30 @@ address cache via sparse index
     if ( result == target_irs+target_jcs[1] ){
       //print_lock.lock(); std::cout << "osman307" << std::endl; print_lock.unlock();
       //std::cout << "store1 " << output_numel_index << " 0" << std::endl;
-      cache_lock->lock();
-      //print_lock.lock(); std::cout << "osman307.1" << std::endl; print_lock.unlock();
-      cache[tensor_numel_index] = 0;
-      //print_lock.lock(); std::cout << "osman308" << std::endl; print_lock.unlock();
-      cache_bitmap->at(tensor_numel_index) = true;
-      //print_lock.lock(); std::cout << "osman309" << std::endl; print_lock.unlock();
-      cache_lock->unlock();
-      //std::cout << "value not present tensor_numel_index " << tensor_numel_index << std::endl;
+      if ( cache_bitmap != NULL ){
+	cache_lock->lock();
+	//print_lock.lock(); std::cout << "osman307.1" << std::endl; print_lock.unlock();
+	cache[tensor_numel_index] = 0;
+	//print_lock.lock(); std::cout << "osman308" << std::endl; print_lock.unlock();
+	cache_bitmap->at(tensor_numel_index) = true;
+	//print_lock.lock(); std::cout << "osman309" << std::endl; print_lock.unlock();
+	cache_lock->unlock();
+	//std::cout << "value not present tensor_numel_index " << tensor_numel_index << std::endl;
+      }
       return 0;
     }else{
       //std::cout << "store2 " << output_numel_index << " " << tensor_data[result - target_irs] << std::endl;
       //print_lock.lock(); std::cout << "osman310" << std::endl; print_lock.unlock();
-      cache_lock->lock();
-      //print_lock.lock(); //std::cout << "osman311" << std::endl; print_lock.unlock();
-      cache[tensor_numel_index] = tensor_data[result - target_irs];
-      //print_lock.lock(); //std::cout << "osman312" << std::endl; print_lock.unlock();
-      cache_bitmap->at(tensor_numel_index) = true;
-      cache_lock->unlock();
-      //std::cout << "store2 complete" << std::endl;
-      //print_lock.lock(); //std::cout << "osman313" << std::endl; print_lock.unlock();
+      if ( cache_bitmap != NULL ){
+	cache_lock->lock();
+	//print_lock.lock(); //std::cout << "osman311" << std::endl; print_lock.unlock();
+	cache[tensor_numel_index] = tensor_data[result - target_irs];
+	//print_lock.lock(); //std::cout << "osman312" << std::endl; print_lock.unlock();
+	cache_bitmap->at(tensor_numel_index) = true;
+	cache_lock->unlock();
+	//std::cout << "store2 complete" << std::endl;
+	//print_lock.lock(); //std::cout << "osman313" << std::endl; print_lock.unlock();
+      }
       return tensor_data[ result - target_irs ];
     }
   }
@@ -707,9 +707,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
     //std::cout << "osman3.14.1" << std::endl;
     input_cache[input_ind] = (double*) malloc( sizeof(double) * (input_data_numel[input_ind]) );
-    //std::cout << "osman3.14.2" << std::endl;
-    input_cache_bitmap[input_ind] = new std::vector<bool>(input_data_numel[input_ind]);
-    //std::cout << "osman3.14.3" << std::endl;
+    if ( input_cache[input_ind] == NULL ){
+      std::cout << "can not allocate " << (sizeof(double) * (input_data_numel[input_ind])) / pow(10,9) << " GB for input cache, continue without cache for input index " << input_ind << std::endl;
+      input_cache_bitmap[input_ind] = NULL;
+    }else{
+      //std::cout << "osman3.14.2" << std::endl;
+      input_cache_bitmap[input_ind] = new std::vector<bool>(input_data_numel[input_ind]);
+      //std::cout << "osman3.14.3" << std::endl;
+    }
   }
   //std::cout << "osman3.15" << std::endl;
 
