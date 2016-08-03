@@ -4,7 +4,11 @@ function [kl_divergences] = get_kl_divergence_values(tfmodel)
         X_data = tfmodel.factorization_model{fm_ind}.data;
         v = round(fm_ind/2);
         X_hat_data = tfmodel.X_hat_tensors(v).data;
-        kl_divergence =  X_data .* log( X_data ) - X_data .* log(  X_hat_data ) - X_data + X_hat_data;
+        if issparse(X_data)
+            kl_divergence =  X_data .* spfun(@log, X_data) - X_data .* spfun(@log, X_hat_data) - X_data + X_hat_data;
+        else
+            kl_divergence =  X_data .* log( X_data ) - X_data .* log(  X_hat_data ) - X_data + X_hat_data;
+        end
         kl_divergences( v ) = sum_all_dims(kl_divergence);
     end
 end

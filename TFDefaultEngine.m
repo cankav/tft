@@ -39,9 +39,9 @@ classdef TFDefaultEngine < handle
                     %     evalin('base', 'display(G.data(1:10))');
                     % end
                                         
-                    if rule_ind == 3 % || rule_ind == 18 || rule_ind == 26
-                        dbstop TFDefaultEngine 58
-                    end
+                    % if rule_ind == 3 % || rule_ind == 18 || rule_ind == 26
+                    %     dbstop TFDefaultEngine 58
+                    % end
 
                     % if iscell( obj.config.gtp_rules{rule_ind}{3} )
                     %     input = num2str(cellfun( @(x) x.id, obj.config.gtp_rules{rule_ind}{3} ));
