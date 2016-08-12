@@ -8,6 +8,7 @@
 #include <algorithm> // for std::binary_search
 #include <stdexcept>
 //#include <assert.h>
+//#include <unistd.h>
 
 int num_threads;
 
@@ -57,6 +58,13 @@ size_t input_length;
 // static void clear_mem(void){
 //   mxFree( output_irs );
 //   mxFree( output_data );
+// }
+
+// //http://stackoverflow.com/a/2513561/1056345
+// unsigned long long get_available_memory_byes(){
+//   long pages = sysconf(_SC_AVPHYS_PAGES);
+//   long page_size = sysconf(_SC_PAGE_SIZE);
+//   return pages * page_size;
 // }
 
 // http://stackoverflow.com/a/446327/1056345
