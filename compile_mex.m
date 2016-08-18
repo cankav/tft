@@ -22,6 +22,7 @@ X_dot_product = Z2.data' * Z1.data;
 pre_process();
 
 % fpermissive is required to conform with gtp(X, Z1, Z2) syntax, otherwise syntax must be X=gtp(Z1,Z2)
+% add -DTFT_DEBUG for debug output
 mex -largeArrayDims CXXFLAGS='-O3 -std=c++11 -fPIC -fpermissive'  gtp_mex.cpp
 gtp_mex_time = tic;
 gtp_mex(16, X, Z1, Z2);
