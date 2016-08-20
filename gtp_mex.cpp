@@ -12,8 +12,8 @@
 
 int num_threads;
 
-size_t* tft_indices_cardinalities;
-size_t* tft_indices_ids;
+size_t* tft_indices_cardinalities=NULL;
+size_t* tft_indices_ids=NULL;
 size_t tft_indices_length;
 mxArray* tft_indices_mx;
 
@@ -25,17 +25,18 @@ mwIndex* output_jcs;
 size_t output_data_maximum_numel;
 mwSize output_data_numel_nzmax;
 size_t* output_index_cardinalities;
-size_t* output_indices_full_cardinality;
-size_t* output_indices_full_strides;
+size_t* output_indices_full_cardinality=NULL;
+size_t* output_indices_full_strides=NULL;
 size_t output_indices_length;
 mxArray* output_indices_mx;
+mwSize* output_data_array_cardinalities=NULL;
 
-double** input_data;
-mwIndex** input_irs;
-mwIndex** input_jcs;
-size_t* input_data_numel;
-size_t** input_indices_full_cardinality;
-size_t** input_indices_full_strides;
+double** input_data=NULL;
+mwIndex** input_irs=NULL;
+mwIndex** input_jcs=NULL;
+size_t* input_data_numel=NULL;
+size_t** input_indices_full_cardinalities=NULL;
+size_t** input_indices_full_strides=NULL;
 double** input_cache;
 std::vector<bool>** input_cache_bitmap; // vector<bool> stores in bits
 std::mutex* input_cache_lock;
@@ -47,7 +48,7 @@ size_t contraction_index_inds_length;
 std::mutex print_lock;
 
 bool is_sparse_output;
-bool* is_sparse_input;
+bool* is_sparse_input=NULL;
 size_t input_length;
 
 //const size_t INITIAL_SPARSE_NZMAX = 100000; // TODO: increase this number after testing
@@ -66,6 +67,39 @@ size_t input_length;
 //   long page_size = sysconf(_SC_PAGE_SIZE);
 //   return pages * page_size;
 // }
+
+void free_memory(){
+#ifdef TFT_DEBUG
+  print_lock.lock(); std::cout << "free dynamically allocated memory" << std::endl; print_lock.unlock();
+#endif
+  free(output_indices_full_cardinality);
+  free(output_indices_full_strides);
+  free(output_data_array_cardinalities);
+  free(tft_indices_cardinalities);
+  free(tft_indices_ids);
+  free(is_sparse_input);
+  free(input_data);
+  free(input_irs);
+  free(input_jcs);
+  free(input_data_numel);
+  for ( size_t input_ind=0; input_ind<input_length; input_ind++ ){
+    free(input_indices_full_cardinalities[input_ind]);
+    free(input_indices_full_strides[input_ind]);
+    free(input_cache[input_ind]);
+    if ( input_cache_bitmap[input_ind] != NULL){
+      delete input_cache_bitmap[input_ind];
+    }
+  }
+  free(input_indices_full_cardinalities);
+  free(input_indices_full_strides);
+  free(input_cache);
+  free(input_cache_bitmap);
+  delete input_cache_lock;
+
+#ifdef TFT_DEBUG
+  print_lock.lock(); std::cout << "free dynamically allocated memory complete" << std::endl; print_lock.unlock();
+#endif
+}
 
 // http://stackoverflow.com/a/446327/1056345
 template<class Iter, class T>
@@ -243,6 +277,7 @@ void compute_output_tensor_part_helper(size_t* output_full_index_configuration, 
 }
 void print_all_values(double* data, bool is_tensor_sparse, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides, std::vector<size_t> index_configuration=std::vector<size_t>(), size_t iter_index=0, mwIndex* target_irs=NULL, mwIndex* target_jcs=NULL, double* target_cache=NULL, std::vector<bool>* target_cache_bitmap=NULL, std::mutex* target_cache_lock=NULL){
   if (is_tensor_sparse && target_irs==NULL){
+    free_memory();
     mexErrMsgTxt( "print_all_values target_irs can not be NULL if data is sparse" );
   }
 
@@ -362,6 +397,7 @@ void* compute_output_tensor_part(void *args){
     }
 
     if (output_numel_ind != output_numel_index){
+      free_memory();
       mexErrMsgTxt('Error output_numel_ind must be equal to output_numel_index');
     }
 
@@ -561,7 +597,7 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
   //   mexErrMsgTxt("Can not create output_data_array_cardinalities_mx, not enough memory");
   // }
   // mwSize* output_data_array_cardinalities = (mwSize*) mxGetData(output_data_array_cardinalities_mx);
-  mwSize* output_data_array_cardinalities = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
+  output_data_array_cardinalities = (mwSize*) malloc( sizeof(mwSize) * tft_indices_length );
   output_indices_full_cardinality = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
   output_indices_full_strides = (size_t*) malloc( sizeof(size_t) * tft_indices_length );
 
@@ -603,13 +639,13 @@ mwSize* init_output_tensor_meta_data(const mxArray* target_mxArray){
   //   std::cout << std::dec << output_indices_full_strides[i] << std::endl;
   // }
 
-  return output_data_array_cardinalities;
 }
 
 void init_sparse_output_tensor(const mxArray* target_mxArray){ //, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t* target_indices_full_strides ){
   //std::cout << "init_sparse_output_tensor start" << std::endl;
   //output_irs_index = 0;
   if( mxIsSparse( output_data_mx ) == false ){
+    free_memory();
     mexErrMsgTxt("init_sparse_output_tensor must not be called with dense data");
   }
 
@@ -627,21 +663,24 @@ void init_sparse_output_tensor(const mxArray* target_mxArray){ //, size_t** targ
 }
 
 void init_dense_output_tensor(const mxArray* target_mxArray, size_t** target_indices_full_cardinality, size_t* target_data_numel, size_t** target_indices_full_strides ){
-  mwSize* output_data_array_cardinalities = init_output_tensor_meta_data(target_mxArray);
+  init_output_tensor_meta_data(target_mxArray); // initializes and populates output_data_array_cardinalities
   init_tensor_meta_data(target_indices_full_cardinality, target_data_numel, target_indices_full_strides, target_mxArray );
   //std::cout << "init_dense_output_tensor: tft_indices_length " << tft_indices_length << std::endl;
   for ( int i=0; i<tft_indices_length; i++){
     if ( output_data_array_cardinalities[i] == 0 ){
+      free_memory();
       mexErrMsgTxt("init_dense_output_tensor: internal error: output_data_array_cardinalities elements can not be equal to zero");
     }
     //std::cout << std::dec << output_data_array_cardinalities[i] << std::endl;
   }
   output_data_mx = mxCreateNumericArray(tft_indices_length, output_data_array_cardinalities, mxDOUBLE_CLASS, mxREAL);
   if (output_data_mx == NULL){
+    free_memory();
     mexErrMsgTxt("Can not create output data, not enough memory");
   }
   output_data = (double*) mxGetData(output_data_mx);
   if (output_data == NULL){
+    free_memory();
     mexErrMsgTxt("init_dense_output_tensor: internal error: output data was not created");
   }
 
@@ -723,7 +762,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   input_irs = (mwIndex**) malloc( sizeof(mwIndex*) * input_length );
   input_jcs = (mwIndex**) malloc( sizeof(mwIndex*) * input_length );
   input_data_numel = (size_t*) malloc( sizeof(size_t*) * input_length );
-  input_indices_full_cardinality = (size_t**) malloc( sizeof(size_t*) * input_length );
+  input_indices_full_cardinalities = (size_t**) malloc( sizeof(size_t*) * input_length );
   input_indices_full_strides = (size_t**) malloc( sizeof(size_t*) * input_length );
   input_cache = (double**) malloc( sizeof(double*) * input_length );
   input_cache_bitmap = (std::vector<bool>**) malloc( sizeof(std::vector<bool>*) * input_length );
@@ -763,7 +802,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       print_lock.lock(); std::cout << "init_sparse_tensor " << input_ind << std::endl; print_lock.unlock();
 #endif
       //std::cout << "osman3.10" << std::endl;
-      init_sparse_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ], &(input_irs[input_ind]), &(input_jcs[input_ind]), &(input_cache[input_ind]), &(input_cache_bitmap[input_ind]), &(input_cache_lock[input_ind]));
+      init_sparse_tensor(&(input_data[input_ind]), &(input_indices_full_cardinalities[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ], &(input_irs[input_ind]), &(input_jcs[input_ind]), &(input_cache[input_ind]), &(input_cache_bitmap[input_ind]), &(input_cache_lock[input_ind]));
 
 #ifdef TFT_DEBUG
       print_lock.lock(); std::cout << "init_sparse_tensor " << input_ind << " complete" << std::endl; print_lock.unlock();
@@ -776,7 +815,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 #endif
 
       //std::cout << "osman3.12 prhs_index " << output_tensor_prhs_index << " " << input_ind << " " << 1 << " total " << output_tensor_prhs_index+input_ind+1 << std::endl;
-      init_dense_tensor(&(input_data[input_ind]), &(input_indices_full_cardinality[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ]);
+      init_dense_tensor(&(input_data[input_ind]), &(input_indices_full_cardinalities[input_ind]), &(input_data_numel[input_ind]), &(input_indices_full_strides[input_ind]), prhs[ output_tensor_prhs_index+input_ind+1 ]);
 #ifdef TFT_DEBUG
       print_lock.lock(); std::cout << "init_dense_tensor prhs_index " << output_tensor_prhs_index << " " << input_ind << " " << 1 << " total " << output_tensor_prhs_index+input_ind+1 << " complete" << std::endl; print_lock.unlock();
 #endif
@@ -909,7 +948,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   //mexAtExit(clear_mem);
 
-  //TODO: free allocated dynamically created elements
+  free_memory();
 }
 
 
