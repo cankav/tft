@@ -29,7 +29,7 @@ pre_process();
 % fpermissive is required to conform with gtp(X, Z1, Z2) syntax,
 % otherwise syntax must be X=gtp(Z1,Z2)
 % compile with -DTFT_DEBUG for debug output
-mex -largeArrayDims CXXFLAGS='-O3 -fPIC -fpermissive -std=c++11' gtp_mex.cpp
+mex -outdir core -largeArrayDims CXXFLAGS='-O3 -fPIC -fpermissive -std=c++11' core/gtp_mex.cpp
 gtp_mex_time = tic;
 gtp_mex(8, X, Z1, Z2);
 display( [ 'gtp_mex time: ' num2str(toc(gtp_mex_time)) ] );
