@@ -53,4 +53,4 @@ run_time=toc;
 
 %display(['run_time ' engine_type ' ' num2str(run_time)])
 
-check_divergence(engine.kl_divergence);
+check_divergence(engine.beta_divergence);

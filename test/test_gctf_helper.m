@@ -19,8 +19,8 @@ function [] = test_gctf_helper(test_model_type)
         evalin('base', 'config = TFEngineConfig(model, 10);');
         evalin('base', ['engine = TFDefaultEngine(config, ''' test_gtp_modes{i} ''');']);
         evalin('base', 'engine.factorize();');
-        evalin('base', 'plot(engine.kl_divergence'');');
-        evalin('base', 'check_divergence(engine.kl_divergence);');
+        evalin('base', 'plot(engine.beta_divergence'');');
+        evalin('base', 'check_divergence(engine.beta_divergence);');
         pause(3);
     end
 

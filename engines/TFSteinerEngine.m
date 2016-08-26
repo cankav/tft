@@ -1,6 +1,6 @@
 classdef TFSteinerEngine < handle
     properties
-        kl_divergence;
+        beta_divergence;
         base_filename;
         draw_dot;
         config;
@@ -679,9 +679,9 @@ classdef TFSteinerEngine < handle
                      execution_times(rule_ind) = execution_times(rule_ind) + toc(execution_tic);
                  end
 
-                 obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
+                 obj.beta_divergence( :, it_num ) = get_beta_divergence_values(obj.config.tfmodel);
 
-                 %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
+                 %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.beta_divergence( :, it_num )' ) ] );
 
              end % end iteration
              display( ['operation time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );

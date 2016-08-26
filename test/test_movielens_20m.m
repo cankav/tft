@@ -34,5 +34,5 @@ end
 config = TFEngineConfig(model, 10);
 engine = TFDefaultEngine(config, 'gtp_mex');
 engine.factorize();
-plot(engine.kl_divergence'');
-check_divergence(engine.kl_divergence);
+plot(engine.beta_divergence'');
+check_divergence(engine.beta_divergence);

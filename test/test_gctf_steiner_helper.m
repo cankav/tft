@@ -22,6 +22,6 @@ function [] = test_gctf_steiner_helper(test_model_type, gtp_rule_group_ids, base
 
     evalin('base', 'engine.factorize();');
     figure
-    evalin('base', 'plot(engine.kl_divergence'');');
-    evalin('base', 'check_divergence(engine.kl_divergence);');
+    evalin('base', 'plot(engine.beta_divergence'');');
+    evalin('base', 'check_divergence(engine.beta_divergence);');
 end

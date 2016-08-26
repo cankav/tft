@@ -42,8 +42,8 @@ engine = TFDefaultEngine(config, 'gtp_mex');
 tic
 engine.factorize();
 display( ['TFDefaultEngine.factorize time: ' num2str(toc)] );
-plot(engine.kl_divergence');
-check_divergence(engine.kl_divergence);
+plot(engine.beta_divergence');
+check_divergence(engine.beta_divergence);
 
 
 
@@ -102,5 +102,5 @@ tic
 engine.factorize();
 display( ['TFSteinerEngine.factorize time: ' num2str(toc)] );
 
-plot(engine.kl_divergence');
-check_divergence(engine.kl_divergence);
+plot(engine.beta_divergence');
+check_divergence(engine.beta_divergence);

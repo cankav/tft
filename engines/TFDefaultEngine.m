@@ -1,6 +1,6 @@
 classdef TFDefaultEngine < handle
     properties
-        kl_divergence;
+        beta_divergence;
         gtp_implementation_selection;
         config;
     end
@@ -11,7 +11,7 @@ classdef TFDefaultEngine < handle
             assert( isstr(gtp_implementation_selection) && (strcmp(gtp_implementation_selection, 'gtp') || strcmp(gtp_implementation_selection, 'gtp_mex') || strcmp(gtp_implementation_selection, 'gtp_full')), 'TFEngineConfig:TFEngineConfig', 'gtp implementation selection must be a string containing one of the following ''gtp'', ''gtp_full'', ''gtp_mex''' );
             obj.gtp_implementation_selection = gtp_implementation_selection;
 
-            obj.kl_divergence = zeros(size(config.tfmodel.coupling_matrix,1), config.iteration_number);
+            obj.beta_divergence = zeros(size(config.tfmodel.coupling_matrix,1), config.iteration_number);
         end
 
         function [] = factorize(obj)
@@ -108,9 +108,9 @@ classdef TFDefaultEngine < handle
                     break
                 end
 
-                obj.kl_divergence( :, it_num ) = get_kl_divergence_values(obj.config.tfmodel);
+                obj.beta_divergence( :, it_num ) = get_beta_divergence_values(obj.config.tfmodel);
 
-                %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.kl_divergence( :, it_num )' ) ] );
+                %display( ['iteration time ' num2str(toc(iteration_tic)) ' seconds divergences ' num2str( obj.beta_divergence( :, it_num )' ) ] );
 
             end % end iteration
             display( ['total time ' num2str(toc(total_tic)) ' average execution_times ' num2str((execution_times./obj.config.iteration_number)')] );
