@@ -63,7 +63,7 @@ classdef TFDefaultEngine < handle
                         assert( sum_all_dims(size(obj.config.gtp_rules{rule_ind}{2}.data)) ~= 0, 'TFDefaultEngine:TFDefaultEngine', 'GTP operation requires output tensor with non-zero data' );
                         input_tensors = obj.config.gtp_rules{rule_ind}{3};
                         if strcmp(obj.gtp_implementation_selection, 'gtp_mex')
-                            gtp_mex(16, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
+                            gtp_mex(8, obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp')
                             gtp(obj.config.gtp_rules{rule_ind}{2}, input_tensors{:} );
                         elseif strcmp(obj.gtp_implementation_selection, 'gtp_full')

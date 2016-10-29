@@ -7,6 +7,7 @@ classdef Tensor < handle
         reshaped = false; % flag indicating if raw data is reshaped by pre_process.m
         original_indices_permute_array = []; % permutation array, which can be used to convert raw data to its original shape
         name = ''; % name of the variable storing this Tensor object, set by pre_process.m
+        is_fixed = 0;
 
         tft_indices = []; % local copy of the global variable, required for parfor executions
         id = -1;
