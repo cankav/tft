@@ -37,7 +37,7 @@ for rule_ind = 1:length(gtp_rules)
 end
 
 config = TFEngineConfig(model, 10);
-config.timeout = 600;
+%config.timeout = 600;
 engine = TFDefaultEngine(config, 'gtp_mex');
 tic
 engine.factorize();
