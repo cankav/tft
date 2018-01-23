@@ -11,4 +11,6 @@ function []=setup_tft(varargin)
             fullfile(prefix, 'models'), ...
             fullfile(prefix, 'test'), ...
             fullfile(prefix, 'utils') )
+
+    evalin('base', 'TFT_EPS=0.000001;');
 end
