@@ -8,6 +8,7 @@ function [beta_divergences] = get_beta_divergence_values(tfmodel)
 
         p_value = tfmodel.p_vector(v);
         %TODO: add p_value == 2 and 3 cases for faster calculation of divergence
+        assert( p_value == 1, 'get_beta_divergence_values', 'only p_value = 1 is implemented')
         if p_value == 1
             if issparse(X_data)
                 kl_divergence =  X_data .* spfun(@log, X_data) - X_data .* spfun(@log, X_hat_data) - X_data + X_hat_data;

@@ -68,6 +68,9 @@ function tensor = create_tensor( index_ids, init_type )
                 tensor.data = ones( data_cardinalities' );
             elseif strcmp( init_type, 'random' )
                 tensor.data = rand( data_cardinalities' );
+            elseif strcmp( init_type, 'random_non_zero' )
+                tensor.data = rand( data_cardinalities' );
+                tensor.data( tensor.data == 0 ) = 0.00001;
             else
                 throw( MException( 'create_tensor:create_tensor', 'Unknown init_type' ) );
             end

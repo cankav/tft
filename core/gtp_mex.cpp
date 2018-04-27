@@ -7,6 +7,7 @@
 #include <math.h>
 #include <algorithm> // for std::binary_search
 #include <stdexcept>
+#include <vector>
 
 int num_threads;
 
