@@ -1,10 +1,10 @@
 function [] = gtp(output_tensor, varargin)
-    assert( isa(output_tensor, 'Tensor'), 'gtp', 'output_tensor must be a Tensor instance' )
+    assert( isa(output_tensor, 'Tensor'), 'gtp output_tensor must be a Tensor instance' )
     for i = 1:length(varargin)
-        assert( isa(varargin{i}, 'Tensor'), 'gtp', 'varargin elements should be Tensor insantences' )
+        assert( isa(varargin{i}, 'Tensor'), 'gtp varargin elements should be Tensor insantences' )
     end
 
-    assert( length(varargin) > 1, 'gtp', 'number of input tensors must be greater than one' )
+    assert( length(varargin) > 1, 'gtp number of input tensors must be greater than one' )
 
     pre_process();
 

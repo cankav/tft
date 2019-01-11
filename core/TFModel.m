@@ -182,6 +182,11 @@ classdef TFModel < handle
                                             obj.d1_delta(alpha),
                                             {obj.d1_Q_v(v_index),  Z_alpha_bar_tensors{:} } };
 
+                        if issparse(obj.X_hat_tensors(v_index).data)
+                            % remove zeros due to sparsity
+                            gtp_rules{end+1} = {'=', obj.d1_delta(alpha), ['arrayfun( @(i) zero_to_epsilon(i), obj.config.tfmodel.d1_delta(' num2str(alpha) ').data)'] };
+                        end
+
                         if first_v
                             gtp_rules{end+1} = { '=', obj.d1_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v_index) ')^-1 .* obj.config.tfmodel.d1_delta(' num2str(alpha) ').data'] };
                         else
@@ -205,6 +210,11 @@ classdef TFModel < handle
                         gtp_rules{end+1} = { 'GTP',
                                             obj.d2_delta(alpha),
                                             {obj.d2_Q_v(v_index), Z_alpha_bar_tensors{:}} };
+
+                        if issparse(obj.X_hat_tensors(v_index).data)
+                            % remove zeros due to sparsity
+                            gtp_rules{end+1} = {'=', obj.d2_delta(alpha), ['arrayfun( @(i) zero_to_epsilon(i), obj.config.tfmodel.d2_delta(' num2str(alpha) ').data)'] };
+                        end
 
                         if first_v
                             gtp_rules{end+1} = { '=', obj.d2_alpha(alpha), ['obj.config.tfmodel.phi_vector(' num2str(v_index) ')^-1 .* obj.config.tfmodel.d2_delta(' num2str(alpha) ').data'] };
