@@ -44,26 +44,20 @@ classdef Tensor < handle
                     % TODO: indices cardinality check
                     % TODO: index number check, number of indices must be same as the number of elements of tft_indices
                     % TODO: implement vector element field indexing to default
-                    tmp = s.subs;
-                    if strcmp( tmp(1), 'get' ) ~= 1
-                        sref = builtin('subsref',obj,s);
+                    % remove indices with zero cardinality
+                    strides = [obj.tft_indices.cardinality] .* (size(obj.data)~=1);
+                    strides = strides( strides ~= 0 );
+                    % first dimension has stride 1
+                    strides = [ 1 cumprod(strides(1:end-1)) ];
 
-                    else
-                        % remove indices with zero cardinality
-                        strides = [obj.tft_indices.cardinality] .* (size(obj.data)~=1);
-                        strides = strides( strides ~= 0 );
-                        % first dimension has stride 1
-                        strides = [ 1 cumprod(strides(1:end-1)) ];
+                    % remove indices with zero cardinality
+                    indices = cell2mat( s.subs ) .* (size(obj.data)~=1);
+                    indices = indices( indices ~= 0 );
+                    % indices are in matlab index, starting from 1
+                    indices = indices - 1;
 
-                        % remove indices with zero cardinality
-                        indices = cell2mat( s.subs(2:end) ) .* (size(obj.data)~=1);
-                        indices = indices( indices ~= 0 );
-                        % indices are in matlab index, starting from 1
-                        indices = indices - 1;
-
-                        index = sum( strides .* indices  ) + 1;
-                        sref = obj.data( index );
-                    end
+                    index = sum( strides .* indices  ) + 1;
+                    sref = obj.data( index );
 
                   case '{}'
                     % s.subs must contain a single scalar, which corresponds to a particular index configuration from
@@ -76,7 +70,7 @@ classdef Tensor < handle
                         full_strides = [obj.tft_indices.cardinality];
                         full_strides = [ 1 cumprod( full_strides(1:end-1) ) ];
 
-                        full_index = cell2mat(s.subs(2:end));
+                        full_index = cell2mat(s.subs);
 
                         % full tensor index
                         tensor_indices = zeros(1, length(obj.tft_indices));
