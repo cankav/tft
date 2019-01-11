@@ -66,7 +66,23 @@ function [] = pre_process()
                         evalin('base', cmd)
                     end
 
-                else
+                    for tft_indices_ind = 1:length(tft_indices)
+                        found = false;
+                        for tensor_index_ind = 1:tensor_index_len
+                            if tft_indices(tft_indices_ind).id == evalin('base', [vars(var_ind).name '.indices{' num2str(tensor_index_ind) '}.id;'])
+                                cmd = [vars(var_ind).name '.obj_size(' num2str(tft_indices_ind) ') = ' num2str(tft_indices(tft_indices_ind).cardinality) ';'];
+                                evalin('base', cmd);
+                                found = true;
+                                break
+                            end
+                        end
+                        if found == false
+                            evalin('base', [vars(var_ind).name '.obj_size[' num2str(tft_indices_ind) '] = 1;'])
+                        end
+                    end
+                    
+
+                else % evalin('base', ['issparse(' vars(var_ind).name '.data)']) == 1
                     TFT_Tensors{ evalin('base', [vars(var_ind).name '.id'] ) } = evalin('base', vars(var_ind).name );
 
                     % make sure dimension of the data are in the same order as in tft_indices
@@ -150,8 +166,11 @@ function [] = pre_process()
                         end
                     end
 
+                    cmd = [vars(var_ind).name '.obj_size = size(' vars(var_ind).name '.data);'];
+                    evalin('base', cmd )
+
                     % check data size for consitency
-                end
+                end % ELSE evalin('base', ['issparse(' vars(var_ind).name '.data)']) == 1
             end
         end
     end

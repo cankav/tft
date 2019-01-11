@@ -8,7 +8,7 @@ index_k = Index(30);
 
 X = Tensor(index_i, index_j, index_k);
 
-X.data = rand(10,20,30);
+X.data = sparse(10*20*30,1);
 
 pre_process(); % must be called after setting data
 
