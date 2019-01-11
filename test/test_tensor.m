@@ -14,3 +14,6 @@ X.data = rand(10,20,30);
 
 % get first element of X
 assert( X(1) == X{1,1,1} )
+
+% TODO add sparse examples
+% TODO add examples not utilizing all dimensions
