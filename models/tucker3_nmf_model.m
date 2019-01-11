@@ -1,7 +1,7 @@
-i_index = Index(2);
-j_index = Index(3);
-k_index = Index(4);
-p_index = Index(5);
+i_index = Index(20);
+j_index = Index(30);
+k_index = Index(40);
+p_index = Index(50);
 q_index = Index(6);
 r_index = Index(7);
 
@@ -27,3 +27,11 @@ p = [1 1];
 phi = [1 1];
 
 factorization_model = {X1, {A, B, C, G}, X2, {A, Z2}};
+
+% run GCTF update rules to estimate latent tensors
+%model = TFModel(factorization_model, p, phi);
+%config = TFEngineConfig(model, 10);
+%engine = TFDefaultEngine(config, 'gtp_mex');
+%engine.factorize();
+%plot(engine.beta_divergence');
+%check_divergence(engine.beta_divergence);

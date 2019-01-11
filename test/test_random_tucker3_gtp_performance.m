@@ -10,7 +10,7 @@ for i=1:10
     clear all;
     tft_clear();
 
-    max_cardinality = 10;
+    max_cardinality = 30;
 
     i_ind_card = randi(max_cardinality)+1;
     j_ind_card = randi(max_cardinality)+1;

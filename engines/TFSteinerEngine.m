@@ -654,7 +654,7 @@ classdef TFSteinerEngine < handle
                          for operation_ind = 1:length(group_operations)
                              operation = group_operations(operation_ind);
                              if operation.type == 'c'
-                                 gtp_mex(16, output_tensor, input_tensors{:} );
+                                 gtp_mex(8, output_tensor, input_tensors{:} );
                              elseif ops(i).type == 's' || ops(i).type == 'm'
                                  if ops(i).type == 's'
                                      op = '@sum';

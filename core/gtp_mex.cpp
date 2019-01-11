@@ -316,7 +316,7 @@ void* compute_output_tensor_part(void *args){
 
     if (output_numel_ind != output_numel_index){
       free_memory();
-      mexErrMsgTxt('Error output_numel_ind must be equal to output_numel_index');
+      mexErrMsgTxt("Error output_numel_ind must be equal to output_numel_index");
     }
 
 #ifdef TFT_DEBUG
@@ -535,6 +535,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   for (int i=0; i<tft_indices_length; i++){
     tft_indices_cardinalities[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "cardinality")))))[0]);
     tft_indices_ids[i] = (size_t) (((double*)mxGetData((( mxGetProperty( tft_indices_mx, i, "id")))))[0]);
+#ifdef TFT_DEBUG
+    print_lock.lock(); std::cout << "tft_indices_cardinalities [" << i << "] = " << tft_indices_cardinalities[i] << std::endl; print_lock.unlock();
+#endif
+
   }
 
 #ifdef TFT_DEBUG

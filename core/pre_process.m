@@ -99,9 +99,9 @@ function [] = pre_process()
 
                     if diff(permute_array) ~= 1
                         % if permute_array is not consecutive, permute data array
-                        cmd = [vars(var_ind).name '.data = permute(' vars(var_ind).name '.data, [' num2str(permute_array) ']);'];
+                        cmd = [vars(var_ind).name '.data = permute(' vars(var_ind).name '.data, [' num2str(permute_array) ']);']
                         evalin('base', cmd)
-                        cmd = [vars(var_ind).name '.reshaped = 1;'];
+                        cmd = [vars(var_ind).name '.reshaped = 1;']
                         evalin('base', cmd)
                     end
 
@@ -122,20 +122,20 @@ function [] = pre_process()
                     evalin('base', [vars(var_ind).name '.original_indices_permute_array = [ ' num2str(original_indices_permute_array) '];']);
 
                     % insert missing dimensions
-                    reshape_array = [];
+                    reshape_array = zeros(1,length(tft_indices),'uint64');
                     reshape = false;
                     for tft_indices_ind = 1:length(tft_indices)
                         found = false;
                         for tensor_index_ind = 1:tensor_index_len
                             if tft_indices(tft_indices_ind).id == evalin('base', [vars(var_ind).name '.indices{' num2str(tensor_index_ind) '}.id'])
-                                reshape_array = [ reshape_array tft_indices( tft_indices_ind ).cardinality ];
+                                reshape_array(tft_indices_ind) = tft_indices( tft_indices_ind ).cardinality;
                                 found = true;
                                 break;
                             end
                         end
 
                         if found == false
-                            reshape_array = [ reshape_array 1 ];
+                            reshape_array(tft_indices_ind) =  1;
                             reshape = true;
                         end
                     end

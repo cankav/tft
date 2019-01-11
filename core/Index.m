@@ -25,7 +25,7 @@ classdef Index < handle
             end
             obj.id = TFT_Index_index;
 
-            obj.cardinality = cardinality;
+            obj.cardinality = double(cardinality);
 
         end
 

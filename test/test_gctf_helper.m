@@ -13,7 +13,7 @@ function [] = test_gctf_helper(test_model_type)
         display_rule( gtp_rules{rule_ind}, rule_ind, 'rule ' );
     end
 
-    test_gtp_modes = {'gtp_full', 'gtp', 'gtp_mex'};
+    test_gtp_modes = {'gtp_mex'};
     for i = 1:length(test_gtp_modes)
         display(['testing in ' test_gtp_modes{i} ' mode']);
         evalin('base', 'config = TFEngineConfig(model, 10);');

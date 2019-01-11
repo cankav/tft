@@ -12,7 +12,7 @@ Z1 = Tensor( genre_index, movie_index);
 Z2 = Tensor( genre_index, user_index );
 
 load data/movielens/ml-100k/ratings.mat
-X.data = ratings;
+X.data = sparse(ratings);
 %X.data = rand( user_index.cardinality, movie_index.cardinality );
 
 Z1.data = rand( genre_index.cardinality, movie_index.cardinality );
